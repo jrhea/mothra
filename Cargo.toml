@@ -1,0 +1,32 @@
+[package]
+name = "hobbits_libp2p_relay"
+version = "0.0.1"
+authors = ["Jonny Rhea <jonny.rhea@consensys.net>"]
+edition = "2018"
+include = [
+    "**/*.rs",
+    "Cargo.toml"
+]
+
+[dependencies]
+getopts = "0.2"
+clap = "2.32.0"
+#SigP repository 
+libp2p =  { git = "https://github.com/SigP/rust-libp2p", rev = "be5710bbde69d8c5be732c13ba64239e2f370a7b" }
+enr =  { git = "https://github.com/SigP/rust-libp2p/", rev = "be5710bbde69d8c5be732c13ba64239e2f370a7b", features = ["serde"] }
+serde = "1.0"
+serde_derive = "1.0"
+slog = { version = "^2.4.1" , features = ["max_level_trace"] }
+tokio = "0.1.16"
+futures = "0.1.25"
+error-chain = "0.12.0"
+tokio-timer = "0.2.10"
+dirs = "2.0.1"
+tokio-io = "0.1.12"
+smallvec = "0.6.10"
+fnv = "1.0.6"
+unsigned-varint = "0.2.2"
+bytes = "0.4.12"
+env_logger = "0.6.0"
+tokio-stdin-stdout = "0.1"
+#libp2p-mdns = "0.9.0"
