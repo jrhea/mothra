@@ -15,7 +15,7 @@ use std::time::{Duration, Instant};
 use core::marker::PhantomData;
 use ctrlc;
 use network::Service as NetworkService;
-use network::{NetworkConfig,error,NetworkMessage,message_handler::HandlerMessage};
+use network::{NetworkConfig,error,NetworkMessage};
 use eth2_libp2p::Service as LibP2PService;
 use eth2_libp2p::{Libp2pEvent, PeerId, Topic};
 use eth2_libp2p::{PubsubMessage, RPCEvent};
