@@ -17,7 +17,6 @@ use ctrlc;
 use network::Service as NetworkService;
 use network::{NetworkConfig,error,NetworkMessage,message_handler::HandlerMessage};
 use eth2_libp2p::Service as LibP2PService;
-use eth2_libp2p::beacon_chain_store::*;
 use eth2_libp2p::{Libp2pEvent, PeerId, Topic};
 use eth2_libp2p::{PubsubMessage, RPCEvent};
 use slot_clock::{SlotClock,SystemTimeSlotClock};
@@ -39,17 +38,7 @@ pub fn start_libp2p_service(args: &ArgMatches, log: slog::Logger) {
     let mut network_config: network::NetworkConfig = NetworkConfig::new();
     network_config.apply_cli_args(args);
     let network_logger = log.new(o!("Service" => "Network"));
-    let spec = types::ChainSpec::minimal();
-
-    let slot_clock: slot_clock::SystemTimeSlotClock = SlotClock::new(
-        spec.genesis_slot, 
-        0, 
-        spec.seconds_per_slot
-    );
-    let beacon_chain_store = BeaconChainStore::from_genesis(spec,slot_clock).unwrap();
-
     let (network, network_send) = NetworkService::new(
-            Arc::new(beacon_chain_store),
             &network_config,
             &executor,
             network_logger,
