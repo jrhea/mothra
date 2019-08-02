@@ -1,118 +1,120 @@
+use clap::ArgMatches;
 use futures::prelude::*;
-use libp2p::{
-    PeerId,
-    Swarm,
-    NetworkBehaviour,
-    identity,
-    tokio_codec::{FramedRead, LinesCodec}
-};
+use std::sync::Arc;
+use parking_lot::Mutex;
+use slog::{crit, debug, info, o, Drain, trace, warn};
+use tokio::runtime::TaskExecutor;
+use tokio::runtime::Builder;
+use tokio::timer::Interval;
+use tokio_timer::clock::Clock;
+use futures::sync::oneshot;
+use futures::Future;
+use exit_future::Exit;
+use std::cell::RefCell;
+use std::time::{Duration, Instant};
+use core::marker::PhantomData;
+use ctrlc;
+use network::Service as NetworkService;
+use network::{NetworkConfig,error,NetworkMessage,message_handler::HandlerMessage};
+use eth2_libp2p::Service as LibP2PService;
+use eth2_libp2p::beacon_chain_store::*;
+use eth2_libp2p::{Libp2pEvent, PeerId, Topic};
+use eth2_libp2p::{PubsubMessage, RPCEvent};
+use slot_clock::{SlotClock,SystemTimeSlotClock};
 
-pub fn start() {
-    print!("Initializing env...");
-    env_logger::init();
-    println!("done");
+/// The interval between heartbeat events.
+pub const HEARTBEAT_INTERVAL_SECONDS: u64 = 15;
 
-    let local_key = identity::Keypair::generate_ed25519();
-    let local_peer_id = PeerId::from(local_key.public());
-    println!("Local peer id: {:?}", local_peer_id);
+/// Create a warning log whenever the peer count is at or below this value.
+pub const WARN_PEER_COUNT: usize = 1;
 
-    let transport = libp2p::build_development_transport(local_key);
+pub fn start_libp2p_service(args: &ArgMatches, log: slog::Logger) {
+    info!(log,"Initializing libP2P....");
+    let mut runtime = Builder::new()
+        .name_prefix("main-")
+        .clock(Clock::system())
+        .build()
+        .map_err(|e| format!("{:?}", e)).unwrap();
+    let executor = runtime.executor();
+    let mut network_config: network::NetworkConfig = NetworkConfig::new();
+    network_config.apply_cli_args(args);
+    let network_logger = log.new(o!("Service" => "Network"));
+    let spec = types::ChainSpec::minimal();
 
-    let floodsub_topic = libp2p::floodsub::TopicBuilder::new("chat").build();
+    let slot_clock: slot_clock::SystemTimeSlotClock = SlotClock::new(
+        spec.genesis_slot, 
+        0, 
+        spec.seconds_per_slot
+    );
+    let beacon_chain_store = BeaconChainStore::from_genesis(spec,slot_clock).unwrap();
 
-    #[derive(NetworkBehaviour)]
-    struct MyBehaviour<TSubstream: libp2p::tokio_io::AsyncRead + libp2p::tokio_io::AsyncWrite> {
-        floodsub: libp2p::floodsub::Floodsub<TSubstream>,
-        mdns: libp2p::mdns::Mdns<TSubstream>,
-    }
+    let (network, network_send) = NetworkService::new(
+            Arc::new(beacon_chain_store),
+            &network_config,
+            &executor,
+            network_logger,
+    ).unwrap();
 
-    impl<TSubstream: libp2p::tokio_io::AsyncRead + libp2p::tokio_io::AsyncWrite> libp2p::core::swarm::NetworkBehaviourEventProcess<libp2p::mdns::MdnsEvent> for MyBehaviour<TSubstream> {
-        fn inject_event(&mut self, event: libp2p::mdns::MdnsEvent) {
-            match event {
-                libp2p::mdns::MdnsEvent::Discovered(list) => {
-                    for (peer, _) in list {
-                        self.floodsub.add_node_to_partial_view(peer);
-                    }
-                },
-                libp2p::mdns::MdnsEvent::Expired(list) => {
-                    for (peer, _) in list {
-                        if !self.mdns.has_node(&peer) {
-                            self.floodsub.remove_node_from_partial_view(&peer);
-                        }
-                    }
-                }
-            }
+    // run service until ctrl-c
+    let (ctrlc_send, ctrlc_oneshot) = oneshot::channel();
+    let ctrlc_send_c = RefCell::new(Some(ctrlc_send));
+    ctrlc::set_handler(move || {
+        if let Some(ctrlc_send) = ctrlc_send_c.try_borrow_mut().unwrap().take() {
+            ctrlc_send.send(()).expect("Error sending ctrl-c message");
         }
-    }
+    })
+    .map_err(|e| format!("Could not set ctrlc handler: {:?}", e)).unwrap();
 
-    impl<TSubstream: libp2p::tokio_io::AsyncRead + libp2p::tokio_io::AsyncWrite> libp2p::core::swarm::NetworkBehaviourEventProcess<libp2p::floodsub::FloodsubEvent> for MyBehaviour<TSubstream> {
-        // Called when `floodsub` produces an event.
-        fn inject_event(&mut self, message: libp2p::floodsub::FloodsubEvent) {
-            if let libp2p::floodsub::FloodsubEvent::Message(message) = message {
-                println!("Received: '{:?}' from {:?}", String::from_utf8_lossy(&message.data), message.source);
-            }
+    let (exit_signal, exit) = exit_future::signal();
+
+    run(&network, executor, exit, log.new(o!("Service" => "Notifier")));
+
+    runtime
+        .block_on(ctrlc_oneshot)
+        .map_err(|e| format!("Ctrlc oneshot failed: {:?}", e)).unwrap();
+}
+
+pub fn run(
+    network: &NetworkService,
+    executor: TaskExecutor,
+    exit: Exit,
+    log: slog::Logger
+) {
+    let err_log = log.clone();
+    // notification heartbeat
+    let interval = Interval::new(
+        Instant::now(),
+        Duration::from_secs(HEARTBEAT_INTERVAL_SECONDS),
+    );
+
+    let libp2p = network.libp2p_service();
+
+    let heartbeat = move |_| {
+        // Number of libp2p (not discv5) peers connected.
+        //
+        // Panics if libp2p is poisoned.
+        let connected_peer_count = libp2p.lock().swarm.connected_peers();
+
+        debug!(log, "libp2p"; "peer_count" => connected_peer_count);
+
+        if connected_peer_count <= WARN_PEER_COUNT {
+            warn!(log, "Low libp2p peer count"; "peer_count" => connected_peer_count);
         }
-    }
 
-    // Create a Swarm to manage peers and events
-    let mut swarm = {
-        let mut behaviour = MyBehaviour {
-            floodsub: libp2p::floodsub::Floodsub::new(local_peer_id.clone()),
-            mdns: libp2p::mdns::Mdns::new().expect("Failed to create mDNS service"),
-        };
-
-        behaviour.floodsub.subscribe(floodsub_topic.clone());
-        libp2p::Swarm::new(transport, behaviour, local_peer_id)
+        Ok(())
     };
 
-    // Reach out to another node if specified
-    if let Some(to_dial) = std::env::args().nth(1) {
-        let dialing = to_dial.clone();
-        match to_dial.parse() {
-            Ok(to_dial) => {
-                match libp2p::Swarm::dial_addr(&mut swarm, to_dial) {
-                    Ok(_) => println!("Dialed {:?}", dialing),
-                    Err(e) => println!("Dial {:?} failed: {:?}", dialing, e)
-                }
-            },
-            Err(err) => println!("Failed to parse address to dial: {:?}", err),
-        }
-    }
+    // map error and spawn
+    let heartbeat_interval = interval
+        .map_err(move |e| debug!(err_log, "Timer error {}", e))
+        .for_each(heartbeat);
 
-    let stdin = tokio_stdin_stdout::stdin(0);
-    let mut framed_stdin = FramedRead::new(stdin, LinesCodec::new());
-
-
-    libp2p::Swarm::listen_on(&mut swarm, "/ip4/0.0.0.0/tcp/0".parse().unwrap()).unwrap();
-
-
-    let mut listening = false;
-    tokio::run(futures::future::poll_fn(move || -> Result<_, ()> {
-        loop {
-            match framed_stdin.poll().expect("Error while polling stdin") {
-                Async::Ready(Some(line)) => swarm.floodsub.publish(&floodsub_topic, line.as_bytes()),
-                Async::Ready(None) => panic!("Stdin closed"),
-                Async::NotReady => break,
-            };
-        }
-
-        loop {
-            match swarm.poll().expect("Error while polling swarm") {
-                Async::Ready(Some(_)) => {
-
-                },
-                Async::Ready(None) | Async::NotReady => {
-                    if !listening {
-                        if let Some(a) = Swarm::listeners(&swarm).next() {
-                            println!("Listening on {:?}", a);
-                            listening = true;
-                        }
-                    }
-                    break
-                }
-            }
-        }
-
-        Ok(Async::NotReady)
-    }));
+    executor.spawn(exit.until(heartbeat_interval).map(|_| ()));
 }
+
+
+
+
+
+
+
