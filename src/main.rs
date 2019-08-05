@@ -1,7 +1,7 @@
 extern crate getopts;
 use slog::{info, o, Drain};
 use clap::{App, Arg};
-use hobbits_libp2p_relay::libp2p_wrapper::service;
+use hobbits_libp2p_relay::libp2p_wrapper::wrapper;
 
 fn main() {
     // Logging
@@ -84,7 +84,7 @@ fn main() {
         )
         .get_matches();
 
-    service::start_libp2p_service(&matches, log.new(o!("Service" => "Libp2p")));
+    wrapper::start_libp2p_service(&matches, log.new(o!("Service" => "Libp2p")));
 
     info!(log,"Goodbye.")
 

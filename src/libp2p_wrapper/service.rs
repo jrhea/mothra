@@ -1,109 +1,164 @@
-use clap::ArgMatches;
-use futures::prelude::*;
-use std::sync::Arc;
-use parking_lot::Mutex;
-use slog::{crit, debug, info, o, Drain, trace, warn};
-use tokio::runtime::TaskExecutor;
-use tokio::runtime::Builder;
-use tokio::timer::Interval;
-use tokio_timer::clock::Clock;
-use futures::sync::oneshot;
-use futures::Future;
-use exit_future::Exit;
-use std::cell::RefCell;
-use std::time::{Duration, Instant};
-use core::marker::PhantomData;
-use ctrlc;
-use network::Service as NetworkService;
-use network::{NetworkConfig,error,NetworkMessage};
+use super::error;
+use eth2_libp2p::NetworkConfig;
 use eth2_libp2p::Service as LibP2PService;
-use eth2_libp2p::{Libp2pEvent, PeerId, Topic};
-use eth2_libp2p::{PubsubMessage, RPCEvent};
-use slot_clock::{SlotClock,SystemTimeSlotClock};
+use eth2_libp2p::Topic;
+use eth2_libp2p::{Libp2pEvent, PeerId};
+use eth2_libp2p::{RPCEvent};
+use futures::prelude::*;
+use futures::Stream;
+use parking_lot::Mutex;
+use slog::{debug, info, o, trace};
+use std::sync::Arc;
+use tokio::runtime::TaskExecutor;
+use tokio::sync::{mpsc, oneshot};
 
-/// The interval between heartbeat events.
-pub const HEARTBEAT_INTERVAL_SECONDS: u64 = 15;
-
-/// Create a warning log whenever the peer count is at or below this value.
-pub const WARN_PEER_COUNT: usize = 1;
-
-pub fn start_libp2p_service(args: &ArgMatches, log: slog::Logger) {
-    info!(log,"Initializing libP2P....");
-    let mut runtime = Builder::new()
-        .name_prefix("main-")
-        .clock(Clock::system())
-        .build()
-        .map_err(|e| format!("{:?}", e)).unwrap();
-    let executor = runtime.executor();
-    let mut network_config: network::NetworkConfig = NetworkConfig::new();
-    network_config.apply_cli_args(args);
-    let network_logger = log.new(o!("Service" => "Network"));
-    let (network, network_send) = NetworkService::new(
-            &network_config,
-            &executor,
-            network_logger,
-    ).unwrap();
-
-    // run service until ctrl-c
-    let (ctrlc_send, ctrlc_oneshot) = oneshot::channel();
-    let ctrlc_send_c = RefCell::new(Some(ctrlc_send));
-    ctrlc::set_handler(move || {
-        if let Some(ctrlc_send) = ctrlc_send_c.try_borrow_mut().unwrap().take() {
-            ctrlc_send.send(()).expect("Error sending ctrl-c message");
-        }
-    })
-    .map_err(|e| format!("Could not set ctrlc handler: {:?}", e)).unwrap();
-
-    let (exit_signal, exit) = exit_future::signal();
-
-    run(&network, executor, exit, log.new(o!("Service" => "Notifier")));
-
-    runtime
-        .block_on(ctrlc_oneshot)
-        .map_err(|e| format!("Ctrlc oneshot failed: {:?}", e)).unwrap();
+/// Service that handles communication between internal services and the eth2_libp2p network service.
+pub struct Service {
+    libp2p_service: Arc<Mutex<LibP2PService>>,
+    _libp2p_exit: oneshot::Sender<()>,
+    _network_send: mpsc::UnboundedSender<NetworkMessage>,
 }
 
-pub fn run(
-    network: &NetworkService,
-    executor: TaskExecutor,
-    exit: Exit,
-    log: slog::Logger
-) {
-    let err_log = log.clone();
-    // notification heartbeat
-    let interval = Interval::new(
-        Instant::now(),
-        Duration::from_secs(HEARTBEAT_INTERVAL_SECONDS),
+impl Service {
+    pub fn new(
+        config: &NetworkConfig,
+        executor: &TaskExecutor,
+        log: slog::Logger,
+    ) -> error::Result<(Arc<Self>, mpsc::UnboundedSender<NetworkMessage>)> {
+        // build the network channel
+        let (network_send, network_recv) = mpsc::unbounded_channel::<NetworkMessage>();
+
+        // launch libp2p service
+        let libp2p_log = log.new(o!("Service" => "Libp2p"));
+        let libp2p_service = Arc::new(Mutex::new(LibP2PService::new(config.clone(), libp2p_log)?));
+
+        // TODO: Spawn thread to handle libp2p messages and pass to message handler thread.
+        let libp2p_exit = spawn_service(
+            libp2p_service.clone(),
+            network_recv,
+            executor,
+            log,
+        )?;
+        let network_service = Service {
+            libp2p_service,
+            _libp2p_exit: libp2p_exit,
+            _network_send: network_send.clone(),
+        };
+
+        Ok((Arc::new(network_service), network_send))
+    }
+
+    pub fn libp2p_service(&self) -> Arc<Mutex<LibP2PService>> {
+        self.libp2p_service.clone()
+    }
+}
+
+fn spawn_service(
+    libp2p_service: Arc<Mutex<LibP2PService>>,
+    network_recv: mpsc::UnboundedReceiver<NetworkMessage>,
+    executor: &TaskExecutor,
+    log: slog::Logger,
+) -> error::Result<tokio::sync::oneshot::Sender<()>> {
+    let (network_exit, exit_rx) = tokio::sync::oneshot::channel();
+
+    // spawn on the current executor
+    executor.spawn(
+        network_service(
+            libp2p_service,
+            network_recv,
+            log.clone(),
+        )
+        // allow for manual termination
+        .select(exit_rx.then(|_| Ok(())))
+        .then(move |_| {
+            info!(log.clone(), "Network service shutdown");
+            Ok(())
+        }),
     );
 
-    let libp2p = network.libp2p_service();
-
-    let heartbeat = move |_| {
-        // Number of libp2p (not discv5) peers connected.
-        //
-        // Panics if libp2p is poisoned.
-        let connected_peer_count = libp2p.lock().swarm.connected_peers();
-
-        debug!(log, "libp2p"; "peer_count" => connected_peer_count);
-
-        if connected_peer_count <= WARN_PEER_COUNT {
-            warn!(log, "Low libp2p peer count"; "peer_count" => connected_peer_count);
-        }
-
-        Ok(())
-    };
-
-    // map error and spawn
-    let heartbeat_interval = interval
-        .map_err(move |e| debug!(err_log, "Timer error {}", e))
-        .for_each(heartbeat);
-
-    executor.spawn(exit.until(heartbeat_interval).map(|_| ()));
+    Ok(network_exit)
 }
 
+fn network_service(
+    libp2p_service: Arc<Mutex<LibP2PService>>,
+    mut network_recv: mpsc::UnboundedReceiver<NetworkMessage>,
+    log: slog::Logger,
+) -> impl futures::Future<Item = (), Error = eth2_libp2p::error::Error> {
+    futures::future::poll_fn(move || -> Result<_, eth2_libp2p::error::Error> {
+        // if the network channel is not ready, try the swarm
+        loop {
+            // poll the network channel
+            match network_recv.poll() {
+                Ok(Async::Ready(Some(message))) => match message {
+                    NetworkMessage::Send(peer_id, outgoing_message) => match outgoing_message {
+                        OutgoingMessage::RPC(rpc_event) => {
+                            trace!(log, "Sending RPC Event: {:?}", rpc_event);
+                            libp2p_service.lock().swarm.send_rpc(peer_id, rpc_event);
+                        }
+                    },
+                    NetworkMessage::Publish { topics, message } => {
+                        debug!(log, "Sending pubsub message"; "topics" => format!("{:?}",topics));
+                        libp2p_service.lock().swarm.publish(topics, message);
+                    }
+                },
+                Ok(Async::NotReady) => break,
+                Ok(Async::Ready(None)) => {
+                    return Err(eth2_libp2p::error::Error::from("Network channel closed"));
+                }
+                Err(_) => {
+                    return Err(eth2_libp2p::error::Error::from("Network channel error"));
+                }
+            }
+        }
 
+        loop {
+            // poll the swarm
+            match libp2p_service.lock().poll() {
+                Ok(Async::Ready(Some(event))) => match event {
+                    Libp2pEvent::RPC(peer_id, rpc_event) => {
+                        debug!(log, "RPC Event: RPC message received: {:?}", rpc_event);
+                    }
+                    Libp2pEvent::PeerDialed(peer_id) => {
+                        debug!(log, "Peer Dialed: {:?}", peer_id);
+                    }
+                    Libp2pEvent::PeerDisconnected(peer_id) => {
+                        debug!(log, "Peer Disconnected: {:?}", peer_id);
+                    }
+                    Libp2pEvent::PubsubMessage {
+                        source, message, ..
+                    } => {
+                        //TODO: Decide if we need to propagate the topic upwards. (Potentially for
+                        //attestations)
+                        debug!(log, "Gossip message received");
 
+                    }
+                },
+                Ok(Async::Ready(None)) => unreachable!("Stream never ends"),
+                Ok(Async::NotReady) => break,
+                Err(_) => break,
+            }
+        }
 
+        Ok(Async::NotReady)
+    })
+}
 
+/// Types of messages that the network service can receive.
+#[derive(Debug)]
+pub enum NetworkMessage {
+    /// Send a message to libp2p service.
+    //TODO: Define typing for messages across the wire
+    Send(PeerId, OutgoingMessage),
+    /// Publish a message to pubsub mechanism.
+    Publish {
+        topics: Vec<Topic>,
+        message: Vec<u8>,
+    },
+}
 
-
+/// Type of outgoing messages that can be sent through the network service.
+#[derive(Debug)]
+pub enum OutgoingMessage {
+    /// Send an RPC request/response.
+    RPC(RPCEvent),
+}
