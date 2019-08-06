@@ -117,8 +117,8 @@ impl<TSubstream> Discovery<TSubstream> {
     }
 
     /// The current number of connected libp2p peers.
-    pub fn connected_peers(&self) -> usize {
-        self.connected_peers.len()
+    pub fn connected_peers(&self) -> HashSet<PeerId> {
+        self.connected_peers.clone()
     }
 
     /// Search for new peers using the underlying discovery mechanism.

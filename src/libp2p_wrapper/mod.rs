@@ -1,3 +1,3 @@
-pub mod wrapper;
+pub mod api;
 pub mod service;
 pub mod error;

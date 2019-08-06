@@ -17,6 +17,7 @@ use libp2p::{
 use slog::{o, debug};
 use std::num::NonZeroU32;
 use std::time::Duration;
+use std::collections::HashSet;
 
 /// Builds the network behaviour that manages the core protocols of eth2.
 /// This core behaviour is managed by `Behaviour` which adds peer management to all core
@@ -160,8 +161,12 @@ impl<TSubstream: AsyncRead + AsyncWrite> Behaviour<TSubstream> {
     }
 
     /* Discovery / Peer management functions */
-    pub fn connected_peers(&self) -> usize {
+    pub fn connected_peers(&self) -> HashSet<PeerId> {
         self.discovery.connected_peers()
+    }
+
+    pub fn num_connected_peers(&self) -> usize {
+        self.discovery.connected_peers().len()
     }
 }
 
