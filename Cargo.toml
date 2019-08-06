@@ -1,5 +1,5 @@
 [package]
-name = "hobbits_libp2p_relay"
+name = "mothra"
 version = "0.0.1"
 authors = ["Jonny Rhea <jonny.rhea@consensys.net>"]
 edition = "2018"

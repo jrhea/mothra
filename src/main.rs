@@ -1,7 +1,7 @@
 extern crate getopts;
 use slog::{info, o, Drain};
 use clap::{App, Arg};
-use hobbits_libp2p_relay::libp2p_wrapper::wrapper;
+use mothra::libp2p_wrapper::wrapper;
 
 fn main() {
     // Logging
