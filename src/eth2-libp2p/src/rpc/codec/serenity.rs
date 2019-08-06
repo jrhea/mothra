@@ -66,10 +66,10 @@ impl Decoder for SerenityInboundCodec {
 
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
         match self.inner.decode(src).map_err(RPCError::from) {
-            Ok(Some(packet)) => match self.protocol.message_name.as_str() {
+            Ok(Some(_packet)) => match self.protocol.message_name.as_str() {
                 "hello" => match self.protocol.version.as_str() {
                     "1.0.0" => Ok(Some(RPCRequest::Hello(HelloMessage{
-                        value: String::from_utf8(packet.to_vec()).unwrap(),
+                        value: String::from_utf8(_packet.to_vec()).unwrap(),
                     }
                     ))),
                     _ => Err(RPCError::InvalidProtocol("Unknown HELLO version")),
@@ -127,11 +127,11 @@ impl Decoder for SerenityOutboundCodec {
 
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
         match self.inner.decode(src).map_err(RPCError::from) {
-            Ok(Some(packet)) => match self.protocol.message_name.as_str() {
+            Ok(Some(_packet)) => match self.protocol.message_name.as_str() {
                 "hello" => match self.protocol.version.as_str() {
                     
                     "1.0.0" => Ok(Some(RPCResponse::Hello(HelloMessage{
-                        value: String::from_utf8(packet.to_vec()).unwrap(),
+                        value: String::from_utf8(_packet.to_vec()).unwrap(),
                     }
                     ))),
                     _ => Err(RPCError::InvalidProtocol("Unknown HELLO version.")),
@@ -149,7 +149,7 @@ impl OutboundCodec for SerenityOutboundCodec {
 
     fn decode_error(&mut self, src: &mut BytesMut) -> Result<Option<Self::ErrorType>, RPCError> {
         match self.inner.decode(src).map_err(RPCError::from) {
-            Ok(Some(packet)) => Ok(None),
+            Ok(Some(_packet)) => Ok(None),
             Ok(None) => Ok(None),
             Err(e) => Err(e),
         }

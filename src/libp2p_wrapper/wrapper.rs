@@ -1,10 +1,9 @@
 use clap::ArgMatches;
 use futures::prelude::*;
-use std::sync::Arc;
 use std::cell::RefCell;
 use std::time::{Duration, Instant};
-use parking_lot::Mutex;
-use slog::{crit, debug, info, o, Drain, trace, warn};
+
+use slog::{debug, info, o, warn};
 use tokio::runtime::TaskExecutor;
 use tokio::runtime::Builder;
 use tokio::timer::Interval;
@@ -14,14 +13,9 @@ use futures::Future;
 use exit_future::Exit;
 use ctrlc;
 use super::service::{Service,NetworkMessage};
-use eth2_libp2p::NetworkConfig;
-use eth2_libp2p::Service as LibP2PService;
-use eth2_libp2p::{Libp2pEvent, PeerId, Topic};
-use eth2_libp2p::{PubsubMessage, TopicBuilder, RPCEvent, RPCRequest, RPCProtocol,RPC,BEACON_ATTESTATION_TOPIC, BEACON_PUBSUB_TOPIC};
-use eth2_libp2p::rpc::methods::*;
-use libp2p::core::protocols_handler::{
-    KeepAlive, ProtocolsHandler, ProtocolsHandlerEvent, ProtocolsHandlerUpgrErr, SubstreamProtocol,
-};
+use eth2_libp2p::{NetworkConfig, TopicBuilder, BEACON_PUBSUB_TOPIC};
+
+
 use tokio::sync::mpsc;
 
 /// The interval between heartbeat events.
@@ -57,7 +51,7 @@ pub fn start_libp2p_service(args: &ArgMatches, log: slog::Logger) {
     })
     .map_err(|e| format!("Could not set ctrlc handler: {:?}", e)).unwrap();
 
-    let (exit_signal, exit) = exit_future::signal();
+    let (_exit_signal, exit) = exit_future::signal();
 
     run(&network, network_send.clone(), executor, exit, log.new(o!("Service" => "Notifier")));
 
@@ -95,7 +89,7 @@ pub fn run(
         }
 
         if libp2p.lock().known_peers.len() > 0 {
-            for peer_id in libp2p.lock().known_peers.keys() {
+            for _peer_id in libp2p.lock().known_peers.keys() {
                 let topic = TopicBuilder::new(BEACON_PUBSUB_TOPIC).build();
                 let message = "Foo".as_bytes();
                 network_send.try_send(NetworkMessage::Publish {

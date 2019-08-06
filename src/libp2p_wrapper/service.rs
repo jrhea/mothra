@@ -7,7 +7,7 @@ use eth2_libp2p::Topic;
 use futures::prelude::*;
 use futures::Stream;
 use parking_lot::Mutex;
-use slog::{debug, info, o, trace};
+use slog::{debug, info, o};
 use std::sync::Arc;
 use tokio::runtime::TaskExecutor;
 use tokio::sync::{mpsc, oneshot};
@@ -86,7 +86,7 @@ fn spawn_service(
 fn network_service(
     libp2p_service: Arc<Mutex<LibP2PService>>,
     mut network_recv: mpsc::UnboundedReceiver<NetworkMessage>,
-    network_send: mpsc::UnboundedSender<NetworkMessage>,
+    _network_send: mpsc::UnboundedSender<NetworkMessage>,
     log: slog::Logger,
 ) -> impl futures::Future<Item = (), Error = eth2_libp2p::error::Error> {
     futures::future::poll_fn(move || -> Result<_, eth2_libp2p::error::Error> {
@@ -120,17 +120,17 @@ fn network_service(
             // poll the swarm
             match libp2p_service.lock().poll() {
                 Ok(Async::Ready(Some(event))) => match event {
-                    Libp2pEvent::RPC(peer_id, rpc_event) => {
+                    Libp2pEvent::RPC(_peer_id, rpc_event) => {
                         debug!(log, "RPC Event: RPC message received: {:?}", rpc_event);
                     }
-                    Libp2pEvent::PeerDialed(peer_id) => {
+                    Libp2pEvent::PeerDialed(_peer_id) => {
                         
                     }
                     Libp2pEvent::PeerDisconnected(peer_id) => {
                         debug!(log, "Peer Disconnected: {:?}", peer_id);
                     }
                     Libp2pEvent::PubsubMessage {
-                        source, message, ..
+                        source: _, message: _, ..
                     } => {
                         //TODO: Decide if we need to propagate the topic upwards. (Potentially for
                         //attestations)

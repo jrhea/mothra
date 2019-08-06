@@ -169,11 +169,6 @@ where
         out: <RPCProtocol as InboundUpgrade<TSubstream>>::Output,
     ) {
         let (req, substream) = out;
-        // drop the stream and return a 0 id for goodbye "requests"
-        //if let r @ RPCRequest::Goodbye(_) = req {
-        //    self.events_out.push(RPCEvent::Request(0, r));
-        //    return;
-        //}
 
         // New inbound request. Store the stream and tag the output.
         let awaiting_stream = WaitingResponse {
@@ -204,19 +199,6 @@ where
         } else {
             self.keep_alive = KeepAlive::Yes;
         }
-
-        // add the stream to substreams if we expect a response, otherwise drop the stream.
-        //if let RPCEvent::Request(id, req) = rpc_event {
-            //if req.expect_response() {
-                //let awaiting_stream = SubstreamState::RequestPendingResponse {
-                //    substream: out,
-                //    rpc_event: RPCEvent::Request(id, req),
-                //    timeout: Instant::now() + Duration::from_secs(RESPONSE_TIMEOUT),
-                //};
-
-            //    self.substreams.push(awaiting_stream);
-            //}
-        //}
     }
 
     // Note: If the substream has closed due to inactivity, or the substream is in the

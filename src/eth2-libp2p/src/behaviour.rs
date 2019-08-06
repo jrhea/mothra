@@ -14,7 +14,7 @@ use libp2p::{
     tokio_io::{AsyncRead, AsyncWrite},
     NetworkBehaviour, PeerId,
 };
-use slog::{o, debug, warn, info};
+use slog::{o, debug};
 use std::num::NonZeroU32;
 use std::time::Duration;
 
