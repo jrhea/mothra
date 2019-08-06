@@ -12,7 +12,7 @@ pub const SHARD_TOPIC_PREFIX: &str = "shard";
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(default)]
-/// Network configuration for lighthouse.
+/// Network configuration for artemis
 pub struct Config {
     /// Data directory where node's keyfile is stored
     pub network_dir: PathBuf,

@@ -28,7 +28,7 @@ const INITIAL_SEARCH_DELAY: u64 = 5;
 /// Local ENR storage filename.
 const ENR_FILENAME: &str = "enr.dat";
 
-/// Lighthouse discovery behaviour. This provides peer management and discovery using the Discv5
+/// Artemis discovery behaviour. This provides peer management and discovery using the Discv5
 /// libp2p protocol.
 pub struct Discovery<TSubstream> {
     /// The peers currently connected to libp2p streams.

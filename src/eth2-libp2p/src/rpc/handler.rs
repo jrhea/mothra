@@ -1,4 +1,4 @@
-use super::methods::{RPCErrorResponse, RPCResponse, RequestId};
+use super::methods::{RPCErrorResponse, RequestId};
 use super::protocol::{RPCError, RPCProtocol, RPCRequest};
 use super::RPCEvent;
 use crate::rpc::protocol::{InboundFramed, OutboundFramed};
@@ -170,10 +170,10 @@ where
     ) {
         let (req, substream) = out;
         // drop the stream and return a 0 id for goodbye "requests"
-        if let r @ RPCRequest::Goodbye(_) = req {
-            self.events_out.push(RPCEvent::Request(0, r));
-            return;
-        }
+        //if let r @ RPCRequest::Goodbye(_) = req {
+        //    self.events_out.push(RPCEvent::Request(0, r));
+        //    return;
+        //}
 
         // New inbound request. Store the stream and tag the output.
         let awaiting_stream = WaitingResponse {
@@ -206,17 +206,17 @@ where
         }
 
         // add the stream to substreams if we expect a response, otherwise drop the stream.
-        if let RPCEvent::Request(id, req) = rpc_event {
-            if req.expect_response() {
-                let awaiting_stream = SubstreamState::RequestPendingResponse {
-                    substream: out,
-                    rpc_event: RPCEvent::Request(id, req),
-                    timeout: Instant::now() + Duration::from_secs(RESPONSE_TIMEOUT),
-                };
+        //if let RPCEvent::Request(id, req) = rpc_event {
+            //if req.expect_response() {
+                //let awaiting_stream = SubstreamState::RequestPendingResponse {
+                //    substream: out,
+                //    rpc_event: RPCEvent::Request(id, req),
+                //    timeout: Instant::now() + Duration::from_secs(RESPONSE_TIMEOUT),
+                //};
 
-                self.substreams.push(awaiting_stream);
-            }
-        }
+            //    self.substreams.push(awaiting_stream);
+            //}
+        //}
     }
 
     // Note: If the substream has closed due to inactivity, or the substream is in the
@@ -366,18 +366,6 @@ fn build_response(rpc_event: RPCEvent, rpc_response: RPCErrorResponse) -> RPCEve
     match rpc_response {
         RPCErrorResponse::Success(response) => {
             match response {
-                // if the response is block roots, tag on the extra request data
-                RPCResponse::BeaconBlockBodies(mut resp) => {
-                    if let RPCEvent::Request(_id, RPCRequest::BeaconBlockBodies(bodies_req)) =
-                        rpc_event
-                    {
-                        resp.block_roots = Some(bodies_req.block_roots);
-                    }
-                    RPCEvent::Response(
-                        id,
-                        RPCErrorResponse::Success(RPCResponse::BeaconBlockBodies(resp)),
-                    )
-                }
                 _ => RPCEvent::Response(id, RPCErrorResponse::Success(response)),
             }
         }

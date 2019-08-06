@@ -14,11 +14,9 @@ use libp2p::{
     tokio_io::{AsyncRead, AsyncWrite},
     NetworkBehaviour, PeerId,
 };
-use slog::{o, trace, warn};
-use ssz::{ssz_encode, Decode, DecodeError, Encode};
+use slog::{o, debug, warn, info};
 use std::num::NonZeroU32;
 use std::time::Duration;
-use types::{Attestation, BeaconBlock};
 
 /// Builds the network behaviour that manages the core protocols of eth2.
 /// This core behaviour is managed by `Behaviour` which adds peer management to all core
@@ -74,20 +72,10 @@ impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<GossipsubE
     fn inject_event(&mut self, event: GossipsubEvent) {
         match event {
             GossipsubEvent::Message(gs_msg) => {
-                trace!(self.log, "Received GossipEvent"; "msg" => format!("{:?}", gs_msg));
+                debug!(self.log, "Received GossipEvent"; "msg" => format!("{:?}", gs_msg));
 
-                let pubsub_message = match PubsubMessage::from_ssz_bytes(&gs_msg.data) {
-                    //TODO: Punish peer on error
-                    Err(e) => {
-                        warn!(
-                            self.log,
-                            "Received undecodable message from Peer {:?} error", gs_msg.source;
-                            "error" => format!("{:?}", e)
-                        );
-                        return;
-                    }
-                    Ok(msg) => msg,
-                };
+                // TODO: this will have to be changed when passing real blocks
+                let pubsub_message = PubsubMessage::Other(String::from_utf8(gs_msg.data).unwrap());
 
                 self.events.push(BehaviourEvent::GossipMessage {
                     source: gs_msg.source,
@@ -159,9 +147,8 @@ impl<TSubstream: AsyncRead + AsyncWrite> Behaviour<TSubstream> {
 
     /// Publishes a message on the pubsub (gossipsub) behaviour.
     pub fn publish(&mut self, topics: Vec<Topic>, message: Vec<u8>) {
-        let message_bytes = ssz_encode(&message);
         for topic in topics {
-            self.gossipsub.publish(topic, message_bytes.clone());
+            self.gossipsub.publish(topic, message.clone());
         }
     }
 
@@ -194,84 +181,8 @@ pub enum BehaviourEvent {
 #[derive(Debug, Clone, PartialEq)]
 pub enum PubsubMessage {
     /// Gossipsub message providing notification of a new block.
-    Block(BeaconBlock<types::MinimalEthSpec>),
+    //Block(BeaconBlock<types::MinimalEthSpec>),
     /// Gossipsub message providing notification of a new attestation.
-    Attestation(Attestation<types::MinimalEthSpec>),
-}
-
-//TODO: Correctly encode/decode enums. Prefixing with integer for now.
-impl Encode for PubsubMessage {
-    fn is_ssz_fixed_len() -> bool {
-        false
-    }
-
-    fn ssz_append(&self, buf: &mut Vec<u8>) {
-        let offset = <u32 as Encode>::ssz_fixed_len() + <Vec<u8> as Encode>::ssz_fixed_len();
-
-        let mut encoder = ssz::SszEncoder::container(buf, offset);
-
-        match self {
-            PubsubMessage::Block(block_gossip) => {
-                encoder.append(&0_u32);
-
-                // Encode the gossip as a Vec<u8>;
-                encoder.append(&block_gossip.as_ssz_bytes());
-            }
-            PubsubMessage::Attestation(attestation_gossip) => {
-                encoder.append(&1_u32);
-
-                // Encode the gossip as a Vec<u8>;
-                encoder.append(&attestation_gossip.as_ssz_bytes());
-            }
-        }
-
-        encoder.finalize();
-    }
-}
-
-impl Decode for PubsubMessage {
-    fn is_ssz_fixed_len() -> bool {
-        false
-    }
-
-    fn from_ssz_bytes(bytes: &[u8]) -> Result<Self, ssz::DecodeError> {
-        let mut builder = ssz::SszDecoderBuilder::new(&bytes);
-
-        builder.register_type::<u32>()?;
-        builder.register_type::<Vec<u8>>()?;
-
-        let mut decoder = builder.build()?;
-
-        let id: u32 = decoder.decode_next()?;
-        let body: Vec<u8> = decoder.decode_next()?;
-
-        match id {
-            0 => Ok(PubsubMessage::Block(BeaconBlock::from_ssz_bytes(&body)?)),
-            1 => Ok(PubsubMessage::Attestation(Attestation::from_ssz_bytes(
-                &body,
-            )?)),
-            _ => Err(DecodeError::BytesInvalid(
-                "Invalid PubsubMessage id".to_string(),
-            )),
-        }
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use types::*;
-
-    #[test]
-    fn ssz_encoding() {
-        let original = PubsubMessage::Block(BeaconBlock::<MainnetEthSpec>::empty(
-            &MainnetEthSpec::default_spec(),
-        ));
-
-        let encoded = ssz_encode(&original);
-
-        let decoded = PubsubMessage::from_ssz_bytes(&encoded).unwrap();
-
-        assert_eq!(original, decoded);
-    }
+    //Attestation(Attestation<types::MinimalEthSpec>),
+    Other(String)
 }

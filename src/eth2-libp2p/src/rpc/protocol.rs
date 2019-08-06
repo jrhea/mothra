@@ -1,7 +1,7 @@
 use super::methods::*;
 use crate::rpc::codec::{
     base::{BaseInboundCodec, BaseOutboundCodec},
-    ssz::{SSZInboundCodec, SSZOutboundCodec},
+    serenity::{SerenityInboundCodec, SerenityOutboundCodec},
     InboundCodec, OutboundCodec,
 };
 use futures::{
@@ -34,10 +34,6 @@ impl UpgradeInfo for RPCProtocol {
     fn protocol_info(&self) -> Self::InfoIter {
         vec![
             ProtocolId::new("hello", "1.0.0", "ssz").into(),
-            ProtocolId::new("goodbye", "1.0.0", "ssz").into(),
-            ProtocolId::new("beacon_block_roots", "1.0.0", "ssz").into(),
-            ProtocolId::new("beacon_block_headers", "1.0.0", "ssz").into(),
-            ProtocolId::new("beacon_block_bodies", "1.0.0", "ssz").into(),
         ]
     }
 }
@@ -135,9 +131,9 @@ where
 
         match protocol_id.encoding.as_str() {
             "ssz" | _ => {
-                let ssz_codec =
-                    BaseInboundCodec::new(SSZInboundCodec::new(protocol_id, MAX_RPC_SIZE));
-                let codec = InboundCodec::SSZ(ssz_codec);
+                let serenity_codec =
+                    BaseInboundCodec::new(SerenityInboundCodec::new(protocol_id, MAX_RPC_SIZE));
+                let codec = InboundCodec::Serenity(serenity_codec);
                 Framed::new(socket, codec)
                     .into_future()
                     .timeout(Duration::from_secs(REQUEST_TIMEOUT))
@@ -163,11 +159,6 @@ where
 #[derive(Debug, Clone)]
 pub enum RPCRequest {
     Hello(HelloMessage),
-    Goodbye(GoodbyeReason),
-    BeaconBlockRoots(BeaconBlockRootsRequest),
-    BeaconBlockHeaders(BeaconBlockHeadersRequest),
-    BeaconBlockBodies(BeaconBlockBodiesRequest),
-    BeaconChainState(BeaconChainStateRequest),
 }
 
 impl UpgradeInfo for RPCRequest {
@@ -186,28 +177,6 @@ impl RPCRequest {
         match self {
             // add more protocols when versions/encodings are supported
             RPCRequest::Hello(_) => vec![ProtocolId::new("hello", "1.0.0", "ssz").into()],
-            RPCRequest::Goodbye(_) => vec![ProtocolId::new("goodbye", "1.0.0", "ssz").into()],
-            RPCRequest::BeaconBlockRoots(_) => {
-                vec![ProtocolId::new("beacon_block_roots", "1.0.0", "ssz").into()]
-            }
-            RPCRequest::BeaconBlockHeaders(_) => {
-                vec![ProtocolId::new("beacon_block_headers", "1.0.0", "ssz").into()]
-            }
-            RPCRequest::BeaconBlockBodies(_) => {
-                vec![ProtocolId::new("beacon_block_bodies", "1.0.0", "ssz").into()]
-            }
-            RPCRequest::BeaconChainState(_) => {
-                vec![ProtocolId::new("beacon_block_state", "1.0.0", "ssz").into()]
-            }
-        }
-    }
-
-    /// This specifies whether a stream should remain open and await a response, given a request.
-    /// A GOODBYE request has no response.
-    pub fn expect_response(&self) -> bool {
-        match self {
-            RPCRequest::Goodbye(_) => false,
-            _ => true,
         }
     }
 }
@@ -235,8 +204,8 @@ where
 
         match protocol_id.encoding.as_str() {
             "ssz" | _ => {
-                let ssz_codec = BaseOutboundCodec::new(SSZOutboundCodec::new(protocol_id, 4096));
-                let codec = OutboundCodec::SSZ(ssz_codec);
+                let serenity_codec = BaseOutboundCodec::new(SerenityOutboundCodec::new(protocol_id, 4096));
+                let codec = OutboundCodec::Serenity(serenity_codec);
                 Framed::new(socket, codec).send(self)
             }
         }
@@ -248,8 +217,6 @@ where
 pub enum RPCError {
     /// Error when reading the packet from the socket.
     ReadError(upgrade::ReadOneError),
-    /// Error when decoding the raw buffer from ssz.
-    SSZDecodeError(ssz::DecodeError),
     /// Invalid Protocol ID.
     InvalidProtocol(&'static str),
     /// IO Error.
@@ -267,12 +234,6 @@ impl From<upgrade::ReadOneError> for RPCError {
     }
 }
 
-impl From<ssz::DecodeError> for RPCError {
-    #[inline]
-    fn from(err: ssz::DecodeError) -> Self {
-        RPCError::SSZDecodeError(err)
-    }
-}
 impl<T> From<tokio::timer::timeout::Error<T>> for RPCError {
     fn from(err: tokio::timer::timeout::Error<T>) -> Self {
         if err.is_elapsed() {
@@ -294,7 +255,6 @@ impl std::fmt::Display for RPCError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match *self {
             RPCError::ReadError(ref err) => write!(f, "Error while reading from socket: {}", err),
-            RPCError::SSZDecodeError(ref err) => write!(f, "Error while decoding ssz: {:?}", err),
             RPCError::InvalidProtocol(ref err) => write!(f, "Invalid Protocol: {}", err),
             RPCError::IoError(ref err) => write!(f, "IO Error: {}", err),
             RPCError::StreamTimeout => write!(f, "Stream Timeout"),
@@ -307,7 +267,6 @@ impl std::error::Error for RPCError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match *self {
             RPCError::ReadError(ref err) => Some(err),
-            RPCError::SSZDecodeError(_) => None,
             RPCError::InvalidProtocol(_) => None,
             RPCError::IoError(ref err) => Some(err),
             RPCError::StreamTimeout => None,

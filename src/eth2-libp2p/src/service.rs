@@ -1,7 +1,7 @@
 use crate::behaviour::{Behaviour, BehaviourEvent, PubsubMessage};
 use crate::error;
 use crate::multiaddr::Protocol;
-use crate::rpc::RPCEvent;
+use crate::rpc::{RPCEvent};
 use crate::NetworkConfig;
 use crate::{TopicBuilder, TopicHash};
 use crate::{BEACON_ATTESTATION_TOPIC, BEACON_PUBSUB_TOPIC};
@@ -15,12 +15,14 @@ use libp2p::core::{
     transport::boxed::Boxed,
     upgrade::{InboundUpgradeExt, OutboundUpgradeExt},
 };
+
 use libp2p::{core, secio, PeerId, Swarm, Transport};
-use slog::{debug, info, trace, warn};
+use slog::{debug, info, warn};
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::{Error, ErrorKind};
 use std::time::Duration;
+use std::collections::HashMap;
 
 type Libp2pStream = Boxed<(PeerId, StreamMuxerBox), Error>;
 type Libp2pBehaviour = Behaviour<Substream<StreamMuxerBox>>;
@@ -34,6 +36,8 @@ pub struct Service{
     pub swarm: Swarm<Libp2pStream, Libp2pBehaviour>,
     /// This node's PeerId.
     _local_peer_id: PeerId,
+    /// A mapping of Peers.
+    pub known_peers: HashMap<PeerId, bool>,
     /// The libp2p logger handle.
     pub log: slog::Logger,
 }
@@ -50,7 +54,7 @@ impl Service {
         let mut swarm = {
             // Set up the transport - tcp/ws with secio and mplex/yamux
             let transport = build_transport(local_private_key.clone());
-            // Lighthouse network behaviour
+            // network behaviour
             let behaviour = Behaviour::new(&local_private_key, &config, &log)?;
             Swarm::new(transport, behaviour, local_peer_id.clone())
         };
@@ -86,7 +90,7 @@ impl Service {
         for topic in topics {
             let t = TopicBuilder::new(topic.clone()).build();
             if swarm.subscribe(t) {
-                trace!(log, "Subscribed to topic: {:?}", topic);
+                debug!(log, "Subscribed to topic: {:?}", topic);
                 subscribed_topics.push(topic);
             } else {
                 warn!(log, "Could not subscribe to topic: {:?}", topic)
@@ -97,6 +101,7 @@ impl Service {
         Ok(Service {
             _local_peer_id: local_peer_id,
             swarm,
+            known_peers: HashMap::new(),
             log,
         })
     }
@@ -117,7 +122,7 @@ impl Stream for Service {
                         topics,
                         message,
                     } => {
-                        trace!(self.log, "Pubsub message received: {:?}", message);
+                        info!(self.log, "Pubsub message received: {:?}", message);
                         return Ok(Async::Ready(Some(Libp2pEvent::PubsubMessage {
                             source,
                             topics,
@@ -125,10 +130,12 @@ impl Stream for Service {
                         })));
                     }
                     BehaviourEvent::RPC(peer_id, event) => {
+                        info!(self.log,"Received RPC message from: {:?}", peer_id);
                         return Ok(Async::Ready(Some(Libp2pEvent::RPC(peer_id, event))));
                     }
                     BehaviourEvent::PeerDialed(peer_id) => {
-                        return Ok(Async::Ready(Some(Libp2pEvent::PeerDialed(peer_id))));
+                         self.known_peers.insert(peer_id.clone(), true);
+                         return Ok(Async::Ready(Some(Libp2pEvent::PeerDialed(peer_id))));
                     }
                     BehaviourEvent::PeerDisconnected(peer_id) => {
                         return Ok(Async::Ready(Some(Libp2pEvent::PeerDisconnected(peer_id))));

@@ -1,8 +1,8 @@
 pub(crate) mod base;
-pub(crate) mod ssz;
+pub(crate) mod serenity;
 
 use self::base::{BaseInboundCodec, BaseOutboundCodec};
-use self::ssz::{SSZInboundCodec, SSZOutboundCodec};
+use self::serenity::{SerenityInboundCodec, SerenityOutboundCodec};
 use crate::rpc::protocol::RPCError;
 use crate::rpc::{RPCErrorResponse, RPCRequest};
 use bytes::BytesMut;
@@ -10,11 +10,11 @@ use tokio::codec::{Decoder, Encoder};
 
 // Known types of codecs
 pub enum InboundCodec {
-    SSZ(BaseInboundCodec<SSZInboundCodec>),
+    Serenity(BaseInboundCodec<SerenityInboundCodec>),
 }
 
 pub enum OutboundCodec {
-    SSZ(BaseOutboundCodec<SSZOutboundCodec>),
+    Serenity(BaseOutboundCodec<SerenityOutboundCodec>),
 }
 
 impl Encoder for InboundCodec {
@@ -23,7 +23,7 @@ impl Encoder for InboundCodec {
 
     fn encode(&mut self, item: Self::Item, dst: &mut BytesMut) -> Result<(), Self::Error> {
         match self {
-            InboundCodec::SSZ(codec) => codec.encode(item, dst),
+            InboundCodec::Serenity(codec) => codec.encode(item, dst),
         }
     }
 }
@@ -34,7 +34,7 @@ impl Decoder for InboundCodec {
 
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
         match self {
-            InboundCodec::SSZ(codec) => codec.decode(src),
+            InboundCodec::Serenity(codec) => codec.decode(src),
         }
     }
 }
@@ -45,7 +45,7 @@ impl Encoder for OutboundCodec {
 
     fn encode(&mut self, item: Self::Item, dst: &mut BytesMut) -> Result<(), Self::Error> {
         match self {
-            OutboundCodec::SSZ(codec) => codec.encode(item, dst),
+            OutboundCodec::Serenity(codec) => codec.encode(item, dst),
         }
     }
 }
@@ -56,7 +56,7 @@ impl Decoder for OutboundCodec {
 
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
         match self {
-            OutboundCodec::SSZ(codec) => codec.decode(src),
+            OutboundCodec::Serenity(codec) => codec.decode(src),
         }
     }
 }

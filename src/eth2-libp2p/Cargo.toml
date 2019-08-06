@@ -5,10 +5,6 @@ authors = ["Age Manning <Age@AgeManning.com>"]
 edition = "2018"
 
 [dependencies]
-eth2_ssz = { path = "../../../lighthouse/lighthouse/eth2/utils/ssz" }
-eth2_ssz_derive = { path = "../../../lighthouse/lighthouse/eth2/utils/ssz_derive" }
-slot_clock = { path = "../../../lighthouse/lighthouse/eth2/utils/slot_clock" }
-types = { path =  "../../../lighthouse/lighthouse/eth2/types" }
 libp2p =  { git = "https://github.com/SigP/rust-libp2p", rev = "be5710bbde69d8c5be732c13ba64239e2f370a7b" }
 enr =  { git = "https://github.com/SigP/rust-libp2p/", rev = "be5710bbde69d8c5be732c13ba64239e2f370a7b", features = ["serde"] }
 clap = "2.32.0"

@@ -13,11 +13,16 @@ use futures::sync::oneshot;
 use futures::Future;
 use exit_future::Exit;
 use ctrlc;
-use super::service::Service;
+use super::service::{Service,NetworkMessage};
 use eth2_libp2p::NetworkConfig;
 use eth2_libp2p::Service as LibP2PService;
 use eth2_libp2p::{Libp2pEvent, PeerId, Topic};
-use eth2_libp2p::{PubsubMessage, RPCEvent};
+use eth2_libp2p::{PubsubMessage, TopicBuilder, RPCEvent, RPCRequest, RPCProtocol,RPC,BEACON_ATTESTATION_TOPIC, BEACON_PUBSUB_TOPIC};
+use eth2_libp2p::rpc::methods::*;
+use libp2p::core::protocols_handler::{
+    KeepAlive, ProtocolsHandler, ProtocolsHandlerEvent, ProtocolsHandlerUpgrErr, SubstreamProtocol,
+};
+use tokio::sync::mpsc;
 
 /// The interval between heartbeat events.
 pub const HEARTBEAT_INTERVAL_SECONDS: u64 = 15;
@@ -54,7 +59,7 @@ pub fn start_libp2p_service(args: &ArgMatches, log: slog::Logger) {
 
     let (exit_signal, exit) = exit_future::signal();
 
-    run(&network, executor, exit, log.new(o!("Service" => "Notifier")));
+    run(&network, network_send.clone(), executor, exit, log.new(o!("Service" => "Notifier")));
 
     runtime
         .block_on(ctrlc_oneshot)
@@ -63,6 +68,7 @@ pub fn start_libp2p_service(args: &ArgMatches, log: slog::Logger) {
 
 pub fn run(
     network: &Service,
+    mut network_send: mpsc::UnboundedSender<NetworkMessage>,
     executor: TaskExecutor,
     exit: Exit,
     log: slog::Logger
@@ -86,6 +92,17 @@ pub fn run(
 
         if connected_peer_count <= WARN_PEER_COUNT {
             warn!(log, "Low libp2p peer count"; "peer_count" => connected_peer_count);
+        }
+
+        if libp2p.lock().known_peers.len() > 0 {
+            for peer_id in libp2p.lock().known_peers.keys() {
+                let topic = TopicBuilder::new(BEACON_PUBSUB_TOPIC).build();
+                let message = "Foo".as_bytes();
+                network_send.try_send(NetworkMessage::Publish {
+                    topics: vec![topic],
+                    message: message.to_vec(),
+                }).unwrap();
+            }
         }
 
         Ok(())

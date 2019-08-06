@@ -1,9 +1,9 @@
 use super::error;
 use eth2_libp2p::NetworkConfig;
 use eth2_libp2p::Service as LibP2PService;
-use eth2_libp2p::Topic;
 use eth2_libp2p::{Libp2pEvent, PeerId};
 use eth2_libp2p::{RPCEvent};
+use eth2_libp2p::Topic;
 use futures::prelude::*;
 use futures::Stream;
 use parking_lot::Mutex;
@@ -11,6 +11,7 @@ use slog::{debug, info, o, trace};
 use std::sync::Arc;
 use tokio::runtime::TaskExecutor;
 use tokio::sync::{mpsc, oneshot};
+
 
 /// Service that handles communication between internal services and the eth2_libp2p network service.
 pub struct Service {
@@ -36,6 +37,7 @@ impl Service {
         let libp2p_exit = spawn_service(
             libp2p_service.clone(),
             network_recv,
+            network_send.clone(),
             executor,
             log,
         )?;
@@ -56,6 +58,7 @@ impl Service {
 fn spawn_service(
     libp2p_service: Arc<Mutex<LibP2PService>>,
     network_recv: mpsc::UnboundedReceiver<NetworkMessage>,
+    network_send: mpsc::UnboundedSender<NetworkMessage>,
     executor: &TaskExecutor,
     log: slog::Logger,
 ) -> error::Result<tokio::sync::oneshot::Sender<()>> {
@@ -66,6 +69,7 @@ fn spawn_service(
         network_service(
             libp2p_service,
             network_recv,
+            network_send,
             log.clone(),
         )
         // allow for manual termination
@@ -82,6 +86,7 @@ fn spawn_service(
 fn network_service(
     libp2p_service: Arc<Mutex<LibP2PService>>,
     mut network_recv: mpsc::UnboundedReceiver<NetworkMessage>,
+    network_send: mpsc::UnboundedSender<NetworkMessage>,
     log: slog::Logger,
 ) -> impl futures::Future<Item = (), Error = eth2_libp2p::error::Error> {
     futures::future::poll_fn(move || -> Result<_, eth2_libp2p::error::Error> {
@@ -92,7 +97,7 @@ fn network_service(
                 Ok(Async::Ready(Some(message))) => match message {
                     NetworkMessage::Send(peer_id, outgoing_message) => match outgoing_message {
                         OutgoingMessage::RPC(rpc_event) => {
-                            trace!(log, "Sending RPC Event: {:?}", rpc_event);
+                            debug!(log, "Sending RPC Event: {:?}", rpc_event);
                             libp2p_service.lock().swarm.send_rpc(peer_id, rpc_event);
                         }
                     },
@@ -119,7 +124,7 @@ fn network_service(
                         debug!(log, "RPC Event: RPC message received: {:?}", rpc_event);
                     }
                     Libp2pEvent::PeerDialed(peer_id) => {
-                        debug!(log, "Peer Dialed: {:?}", peer_id);
+                        
                     }
                     Libp2pEvent::PeerDisconnected(peer_id) => {
                         debug!(log, "Peer Disconnected: {:?}", peer_id);
@@ -129,8 +134,6 @@ fn network_service(
                     } => {
                         //TODO: Decide if we need to propagate the topic upwards. (Potentially for
                         //attestations)
-                        debug!(log, "Gossip message received");
-
                     }
                 },
                 Ok(Async::Ready(None)) => unreachable!("Stream never ends"),
