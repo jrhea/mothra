@@ -13,14 +13,13 @@ use tokio::runtime::TaskExecutor;
 use tokio::sync::{mpsc, oneshot};
 
 
-/// Service that handles communication between internal services and the eth2_libp2p network service.
-pub struct Service {
+pub struct Network {
     libp2p_service: Arc<Mutex<LibP2PService>>,
     _libp2p_exit: oneshot::Sender<()>,
     _network_send: mpsc::UnboundedSender<NetworkMessage>,
 }
 
-impl Service {
+impl Network {
     pub fn new(
         config: &NetworkConfig,
         executor: &TaskExecutor,
@@ -29,8 +28,8 @@ impl Service {
         // build the network channel
         let (network_send, network_recv) = mpsc::unbounded_channel::<NetworkMessage>();
 
-        // launch libp2p service
-        let libp2p_log = log.new(o!("Service" => "Libp2p"));
+        // launch libp2p Network
+        let libp2p_log = log.new(o!("Network" => "Libp2p"));
         let libp2p_service = Arc::new(Mutex::new(LibP2PService::new(config.clone(), libp2p_log)?));
 
         // TODO: Spawn thread to handle libp2p messages and pass to message handler thread.
@@ -41,7 +40,7 @@ impl Service {
             executor,
             log,
         )?;
-        let network_service = Service {
+        let network_service = Network {
             libp2p_service,
             _libp2p_exit: libp2p_exit,
             _network_send: network_send.clone(),
@@ -75,7 +74,7 @@ fn spawn_service(
         // allow for manual termination
         .select(exit_rx.then(|_| Ok(())))
         .then(move |_| {
-            info!(log.clone(), "Network service shutdown");
+            info!(log.clone(), "Network Network shutdown");
             Ok(())
         }),
     );
@@ -146,10 +145,10 @@ fn network_service(
     })
 }
 
-/// Types of messages that the network service can receive.
+/// Types of messages that the network Network can receive.
 #[derive(Debug)]
 pub enum NetworkMessage {
-    /// Send a message to libp2p service.
+    /// Send a message to libp2p Network.
     //TODO: Define typing for messages across the wire
     Send(PeerId, OutgoingMessage),
     /// Publish a message to pubsub mechanism.
@@ -159,7 +158,7 @@ pub enum NetworkMessage {
     },
 }
 
-/// Type of outgoing messages that can be sent through the network service.
+/// Type of outgoing messages that can be sent through the network Network.
 #[derive(Debug)]
 pub enum OutgoingMessage {
     /// Send an RPC request/response.

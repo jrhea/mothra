@@ -3,11 +3,7 @@ use std::sync::mpsc;
 use std::{thread, time};
 use slog::{info, o, Drain};
 use clap::{App, Arg};
-use libp2p::tokio_codec::{FramedRead, LinesCodec};
-use futures::prelude::*;
-use exit_future::Exit;
-use mothra::libp2p_wrapper::service::{Service,NetworkMessage};
-use mothra::libp2p_wrapper::api;
+use mothra::api_libp2p::api;
 
 fn main() {
     // Logging
@@ -90,9 +86,6 @@ fn main() {
         )
         .get_matches();
 
-
-
-
     let (tx, rx) = mpsc::channel();
 
     thread::spawn(move || {
@@ -108,22 +101,6 @@ fn main() {
         };
         tx.send(message);
     }
-    
-    
-    //let stdin = tokio_stdin_stdout::stdin(0);
-    //let mut framed_stdin = FramedRead::new(stdin, LinesCodec::new());
-    //let glog = log.new(o!("Service" => "gossip"));
-    
-	// tokio::run(futures::future::poll_fn(move || -> Result<_, ()> {
-    //     loop {
-    //         match framed_stdin.poll().expect("Error while polling stdin") {
-    //             Async::Ready(Some(line)) => api::gossip(network_send.to_owned(),line.as_bytes().to_vec(),glog.to_owned()),
-    //             Async::Ready(None) => unreachable!("Stdin closed"),
-    //             Async::NotReady => break,
-    //         };
-    //     }
-    //     Ok(Async::NotReady)
-    // }));
 
     //info!(log,"Goodbye.")
 

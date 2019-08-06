@@ -1,24 +1,16 @@
 use clap::ArgMatches;
 use futures::prelude::*;
-use std::cell::RefCell;
 use std::sync::mpsc as sync;
-use std::sync::Arc;
-use parking_lot::Mutex;
 use std::time::{Duration, Instant};
 use slog::{debug, info, o, warn};
 use tokio::runtime::TaskExecutor;
 use tokio::runtime::Builder;
 use tokio::timer::Interval;
 use tokio_timer::clock::Clock;
-use futures::sync::oneshot;
 use futures::Future;
-use exit_future::Exit;
-use ctrlc;
 use eth2_libp2p::{NetworkConfig, TopicBuilder, BEACON_PUBSUB_TOPIC};
 use tokio::sync::mpsc;
-use super::error;
-use super::service::{Service,NetworkMessage};
-
+use super::network::{Network,NetworkMessage};
 
 /// The interval between heartbeat events.
 pub const HEARTBEAT_INTERVAL_SECONDS: u64 = 15;
@@ -41,8 +33,8 @@ pub fn init(args: &ArgMatches, rx: &sync::Receiver<Message>, log: slog::Logger) 
     let executor = runtime.executor();
     let mut network_config = NetworkConfig::new();
     network_config.apply_cli_args(args);
-    let network_logger = log.new(o!("Service" => "Network"));
-    let (network, network_send) = Service::new(
+    let network_logger = log.new(o!("Network" => "Network"));
+    let (network, network_send) = Network::new(
             &network_config,
             &executor.clone(),
             network_logger,
@@ -53,13 +45,13 @@ pub fn init(args: &ArgMatches, rx: &sync::Receiver<Message>, log: slog::Logger) 
     loop {
         let recv = rx.recv().unwrap();
         if recv.command == "GOSSIP".to_string() {
-            gossip(network_send.clone(), recv.value.to_vec(),log.new(o!("Service" => "gossip")));
+            gossip(network_send.clone(), recv.value.to_vec(),log.new(o!("Network" => "gossip")));
         }
     }
 }
 
 fn run(
-    network: &Service,
+    network: &Network,
     executor: TaskExecutor,
     log: slog::Logger
 ) {
@@ -74,7 +66,7 @@ fn run(
     let libp2p = network.libp2p_service();
 
     let heartbeat = move |_| {
-        // Panics if libp2p is poisoned.
+
         let connected_peer_count = libp2p.lock().swarm.num_connected_peers();
 
         debug!(log, "libp2p"; "peer_count" => connected_peer_count);

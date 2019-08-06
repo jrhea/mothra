@@ -1,3 +1,3 @@
 pub mod api;
-pub mod service;
+pub mod network;
 pub mod error;
