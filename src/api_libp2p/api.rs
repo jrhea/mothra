@@ -8,7 +8,8 @@ use tokio::runtime::Builder;
 use tokio::timer::Interval;
 use tokio_timer::clock::Clock;
 use futures::Future;
-use eth2_libp2p::{NetworkConfig, TopicBuilder, BEACON_PUBSUB_TOPIC};
+use clap::{App, Arg};
+use eth2_libp2p::{NetworkConfig, TopicBuilder, BEACON_PUBSUB_TOPIC,Message};
 use tokio::sync::mpsc;
 use super::network::{Network,NetworkMessage};
 
@@ -18,39 +19,39 @@ pub const HEARTBEAT_INTERVAL_SECONDS: u64 = 15;
 /// Create a warning log whenever the peer count is at or below this value.
 pub const WARN_PEER_COUNT: usize = 1;
 
-pub struct Message {
-    pub command: String,
-    pub value: Vec<u8>
-}
-
-pub fn init(args: &ArgMatches, rx: &sync::Receiver<Message>, log: slog::Logger) {
+pub fn start(local_tx: &sync::Sender<Message>,local_rx: &sync::Receiver<Message>, log: slog::Logger) {
     info!(log,"Initializing libP2P....");
-    let mut runtime = Builder::new()
-        .name_prefix("init-")
+    let runtime = Builder::new()
+        .name_prefix("api-")
         .clock(Clock::system())
         .build()
         .map_err(|e| format!("{:?}", e)).unwrap();
     let executor = runtime.executor();
     let mut network_config = NetworkConfig::new();
-    network_config.apply_cli_args(args);
+    let args = config();
+    network_config.apply_cli_args(&args).unwrap();
     let network_logger = log.new(o!("Network" => "Network"));
+    let (network_tx, network_rx) = sync::channel();
     let (network, network_send) = Network::new(
+            network_tx,
             &network_config,
             &executor.clone(),
             network_logger,
     ).unwrap();
     
-    run(&network, executor, log.clone());
+    monitor(&network, executor, log.clone());
     
     loop {
-        let recv = rx.recv().unwrap();
-        if recv.command == "GOSSIP".to_string() {
-            gossip(network_send.clone(), recv.value.to_vec(),log.new(o!("Network" => "gossip")));
+        let local_message = local_rx.recv().unwrap();
+        if local_message.command == "GOSSIP".to_string() {
+            gossip(network_send.clone(), local_message.value.to_vec(),log.new(o!("API" => "gossip()")));
         }
+        let network_message = network_rx.recv().unwrap();
+        local_tx.send(network_message).unwrap();
     }
 }
 
-fn run(
+fn monitor(
     network: &Network,
     executor: TaskExecutor,
     log: slog::Logger
@@ -100,7 +101,77 @@ fn gossip( mut network_send: mpsc::UnboundedSender<NetworkMessage>, message: Vec
 }
 
 
-
-
-
-
+fn config() -> ArgMatches<'static> {
+    App::new("Artemis")
+    .version("0.0.1")
+    .author("Your Mom")
+    .about("Eth 2.0 Client")
+    .arg(
+        Arg::with_name("datadir")
+            .long("datadir")
+            .value_name("DIR")
+            .help("Data directory for keys and databases.")
+            .takes_value(true)
+    )
+    // network related arguments
+    .arg(
+        Arg::with_name("listen-address")
+            .long("listen-address")
+            .value_name("Address")
+            .help("The address artemis will listen for UDP and TCP connections. (default 127.0.0.1).")
+            .takes_value(true),
+    )
+    .arg(
+        Arg::with_name("maxpeers")
+            .long("maxpeers")
+            .help("The maximum number of peers (default 10).")
+            .takes_value(true),
+    )
+    .arg(
+        Arg::with_name("boot-nodes")
+            .long("boot-nodes")
+            .allow_hyphen_values(true)
+            .value_name("BOOTNODES")
+            .help("One or more comma-delimited base64-encoded ENR's to bootstrap the p2p network.")
+            .takes_value(true),
+    )
+    .arg(
+        Arg::with_name("port")
+            .long("port")
+            .value_name("Artemis Port")
+            .help("The TCP/UDP port to listen on. The UDP port can be modified by the --discovery-port flag.")
+            .takes_value(true),
+    )
+    .arg(
+        Arg::with_name("discovery-port")
+            .long("disc-port")
+            .value_name("DiscoveryPort")
+            .help("The discovery UDP port.")
+            .takes_value(true),
+    )
+    .arg(
+        Arg::with_name("discovery-address")
+            .long("discovery-address")
+            .value_name("Address")
+            .help("The IP address to broadcast to other peers on how to reach this node.")
+            .takes_value(true),
+    )
+    .arg(
+        Arg::with_name("debug-level")
+            .long("debug-level")
+            .value_name("LEVEL")
+            .short("s")
+            .help("The title of the spec constants for chain config.")
+            .takes_value(true)
+            .possible_values(&["info", "debug", "trace", "warn", "error", "crit"])
+            .default_value("info"),
+    )
+    .arg(
+        Arg::with_name("verbosity")
+            .short("v")
+            .multiple(true)
+            .help("Sets the verbosity level")
+            .takes_value(true),
+    )
+    .get_matches()
+}

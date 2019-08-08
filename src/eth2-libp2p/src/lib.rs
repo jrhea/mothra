@@ -23,3 +23,4 @@ pub use libp2p::{
 pub use rpc::{RPCEvent, RPCRequest,RPCProtocol, RPC};
 pub use service::Libp2pEvent;
 pub use service::Service;
+pub use service::Message;

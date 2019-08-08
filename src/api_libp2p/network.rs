@@ -1,6 +1,7 @@
 use super::error;
 use eth2_libp2p::NetworkConfig;
 use eth2_libp2p::Service as LibP2PService;
+use eth2_libp2p::Message;
 use eth2_libp2p::{Libp2pEvent, PeerId};
 use eth2_libp2p::{RPCEvent};
 use eth2_libp2p::Topic;
@@ -9,9 +10,9 @@ use futures::Stream;
 use parking_lot::Mutex;
 use slog::{debug, info, o};
 use std::sync::Arc;
+use std::sync::mpsc as sync;
 use tokio::runtime::TaskExecutor;
 use tokio::sync::{mpsc, oneshot};
-
 
 pub struct Network {
     libp2p_service: Arc<Mutex<LibP2PService>>,
@@ -21,18 +22,16 @@ pub struct Network {
 
 impl Network {
     pub fn new(
+        tx: sync::Sender<Message>,
         config: &NetworkConfig,
         executor: &TaskExecutor,
         log: slog::Logger,
     ) -> error::Result<(Arc<Self>, mpsc::UnboundedSender<NetworkMessage>)> {
         // build the network channel
         let (network_send, network_recv) = mpsc::unbounded_channel::<NetworkMessage>();
-
         // launch libp2p Network
         let libp2p_log = log.new(o!("Network" => "Libp2p"));
-        let libp2p_service = Arc::new(Mutex::new(LibP2PService::new(config.clone(), libp2p_log)?));
-
-        // TODO: Spawn thread to handle libp2p messages and pass to message handler thread.
+        let libp2p_service = Arc::new(Mutex::new(LibP2PService::new(config.clone(), std::sync::Mutex::new(tx), libp2p_log)?));
         let libp2p_exit = spawn_service(
             libp2p_service.clone(),
             network_recv,
@@ -74,7 +73,7 @@ fn spawn_service(
         // allow for manual termination
         .select(exit_rx.then(|_| Ok(())))
         .then(move |_| {
-            info!(log.clone(), "Network Network shutdown");
+            info!(log.clone(), "Network shutdown");
             Ok(())
         }),
     );
@@ -89,7 +88,6 @@ fn network_service(
     log: slog::Logger,
 ) -> impl futures::Future<Item = (), Error = eth2_libp2p::error::Error> {
     futures::future::poll_fn(move || -> Result<_, eth2_libp2p::error::Error> {
-        // if the network channel is not ready, try the swarm
         loop {
             // poll the network channel
             match network_recv.poll() {
@@ -114,7 +112,6 @@ fn network_service(
                 }
             }
         }
-
         loop {
             // poll the swarm
             match libp2p_service.lock().poll() {
@@ -131,16 +128,14 @@ fn network_service(
                     Libp2pEvent::PubsubMessage {
                         source: _, message: _, ..
                     } => {
-                        //TODO: Decide if we need to propagate the topic upwards. (Potentially for
-                        //attestations)
-                    }
+
+                    } 
                 },
                 Ok(Async::Ready(None)) => unreachable!("Stream never ends"),
                 Ok(Async::NotReady) => break,
                 Err(_) => break,
             }
         }
-
         Ok(Async::NotReady)
     })
 }

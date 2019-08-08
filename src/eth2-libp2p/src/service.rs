@@ -15,7 +15,7 @@ use libp2p::core::{
     transport::boxed::Boxed,
     upgrade::{InboundUpgradeExt, OutboundUpgradeExt},
 };
-
+use std::sync::mpsc as sync;
 use libp2p::{core, secio, PeerId, Swarm, Transport};
 use slog::{debug, info, warn};
 use std::fs::File;
@@ -27,7 +27,19 @@ type Libp2pStream = Boxed<(PeerId, StreamMuxerBox), Error>;
 type Libp2pBehaviour = Behaviour<Substream<StreamMuxerBox>>;
 
 const NETWORK_KEY_FILENAME: &str = "key";
+pub struct Message {
+    pub command: String,
+    pub value: Vec<u8>,
+}
 
+impl Message {
+    pub fn new (command: String, value: Vec<u8>) -> Message {
+        Message {
+            command: command,
+            value: value
+        }
+    }
+}
 /// The configuration and state of the libp2p components for the beacon node.
 pub struct Service{
     /// The libp2p Swarm handler.
@@ -35,13 +47,14 @@ pub struct Service{
     pub swarm: Swarm<Libp2pStream, Libp2pBehaviour>,
     /// This node's PeerId.
     _local_peer_id: PeerId,
+    tx: std::sync::Mutex<sync::Sender<Message>>,
     /// The libp2p logger handle.
     pub log: slog::Logger,
 }
 
 impl Service {
 
-    pub fn new(config: NetworkConfig, log: slog::Logger) -> error::Result<Self> {
+    pub fn new(config: NetworkConfig, tx: std::sync::Mutex<sync::Sender<Message>>, log: slog::Logger) -> error::Result<Self> {
         // load the private key from CLI flag, disk or generate a new one
         let local_private_key = load_private_key(&config, &log);
 
@@ -77,8 +90,6 @@ impl Service {
 
         // subscribe to default gossipsub topics
         let mut topics = vec![];
-        //TODO: Handle multiple shard attestations. For now we simply use a separate topic for
-        //attestations
         topics.push(BEACON_ATTESTATION_TOPIC.to_string());
         topics.push(BEACON_PUBSUB_TOPIC.to_string());
         topics.append(&mut config.topics.clone());
@@ -94,10 +105,10 @@ impl Service {
             }
         }
         info!(log, "Subscribed to topics: {:?}", subscribed_topics);
-
         Ok(Service {
             _local_peer_id: local_peer_id,
             swarm,
+            tx,
             log,
         })
     }
@@ -118,7 +129,15 @@ impl Stream for Service {
                         topics,
                         message,
                     } => {
-                        info!(self.log, "Pubsub message received: {:?}", message);
+                        debug!(self.log, "Pubsub message received: {:?}", message);
+                        match *message.clone() {
+                            PubsubMessage::Other(value) => {
+                                self.tx.lock().unwrap().send(Message {
+                                    command: "GOSSIP".to_string(),
+                                    value: value.as_bytes().to_vec()
+                                }).unwrap();
+                            },
+                        }
                         return Ok(Async::Ready(Some(Libp2pEvent::PubsubMessage {
                             source,
                             topics,
@@ -179,6 +198,7 @@ fn build_transport(local_private_key: Keypair) -> Boxed<(PeerId, StreamMuxerBox)
 }
 
 /// Events that can be obtained from polling the Libp2p Service.
+#[derive(Debug)]
 pub enum Libp2pEvent {
     /// An RPC response request has been received on the swarm.
     RPC(PeerId, RPCEvent),

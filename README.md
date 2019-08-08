@@ -16,7 +16,7 @@ than:
   - ingress
   - egress
 
-> Note: Mothra is early in development and NOT producrion ready.
+> Note: Mothra is early in development and NOT production ready.
 
 ### "Abandon all hope — Ye Who Enter Here"
 

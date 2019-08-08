@@ -73,7 +73,7 @@ impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<GossipsubE
     fn inject_event(&mut self, event: GossipsubEvent) {
         match event {
             GossipsubEvent::Message(gs_msg) => {
-                debug!(self.log, "Received GossipEvent"; "msg" => format!("{:?}", gs_msg));
+                //debug!(self.log, "Received GossipEvent"; "msg" => format!("{:?}", gs_msg));
 
                 // TODO: this will have to be changed when passing real blocks
                 let pubsub_message = PubsubMessage::Other(String::from_utf8(gs_msg.data).unwrap());
