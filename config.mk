@@ -1,12 +1,15 @@
-OS = $(shell uname -s | tr '[:upper:]' '[:lower:]')
+OS:=$(shell uname -s | tr '[:upper:]' '[:lower:]')
 
 ifeq ($(OS), linux)
-	EXT = so
-	OS_LFLAGS =
+	EXT:=so
+	OS_LFLAGS:=
 else ifeq ($(OS), darwin)
-	EXT = dylib
-	OS_LFLAGS = -mmacosx-version-min=$(shell defaults read loginwindow SystemVersionStampAsString) -framework CoreFoundation -framework Security
+	EXT:=dylib
+	OS_LFLAGS:=-mmacosx-version-min=$(shell defaults read loginwindow SystemVersionStampAsString) -framework CoreFoundation -framework Security
 endif
 
-CDIR = core
-BDIR = bindings
+ROOT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+CORE_DIR:=core
+BIND_DIR:=bindings
+CBIND_DIR:=c
+EXAMPLES_DIR:=examples

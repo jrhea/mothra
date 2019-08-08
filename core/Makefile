@@ -2,11 +2,8 @@ SHELL := /bin/sh
 
 include ../config.mk
 
-core: 
-	cargo build
-
-run:
-	cargo run
+rust: 
+	cargo build --release
 
 clean:
 	cargo clean

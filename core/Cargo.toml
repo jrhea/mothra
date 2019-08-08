@@ -3,6 +3,7 @@ name = "mothra"
 version = "0.0.1"
 authors = ["Jonny Rhea <jonny.rhea@consensys.net>"]
 edition = "2018"
+build = "build.rs"
 include = [
     "**/*.rs",
     "Cargo.toml"
@@ -34,4 +35,8 @@ unsigned-varint = "0.2.2"
 bytes = "0.4.12"
 env_logger = "0.6.0"
 tokio-stdin-stdout = "0.1"
+
+[lib]
+name = "mothra"
+crate-type = ["staticlib", "cdylib"]
 
