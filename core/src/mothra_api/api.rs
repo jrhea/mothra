@@ -9,7 +9,7 @@ use tokio::timer::Interval;
 use tokio_timer::clock::Clock;
 use futures::Future;
 use clap::{App, Arg};
-use eth2_libp2p::{NetworkConfig, TopicBuilder, BEACON_PUBSUB_TOPIC,Message};
+use libp2p_wrapper::{NetworkConfig, TopicBuilder, BEACON_PUBSUB_TOPIC,Message};
 use tokio::sync::mpsc;
 use super::network::{Network,NetworkMessage};
 

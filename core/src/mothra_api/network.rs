@@ -1,10 +1,10 @@
 use super::error;
-use eth2_libp2p::NetworkConfig;
-use eth2_libp2p::Service as LibP2PService;
-use eth2_libp2p::Message;
-use eth2_libp2p::{Libp2pEvent, PeerId};
-use eth2_libp2p::{RPCEvent};
-use eth2_libp2p::Topic;
+use libp2p_wrapper::NetworkConfig;
+use libp2p_wrapper::Service as LibP2PService;
+use libp2p_wrapper::Message;
+use libp2p_wrapper::{Libp2pEvent, PeerId};
+use libp2p_wrapper::{RPCEvent};
+use libp2p_wrapper::Topic;
 use futures::prelude::*;
 use futures::Stream;
 use parking_lot::Mutex;
@@ -86,8 +86,8 @@ fn network_service(
     mut network_recv: mpsc::UnboundedReceiver<NetworkMessage>,
     _network_send: mpsc::UnboundedSender<NetworkMessage>,
     log: slog::Logger,
-) -> impl futures::Future<Item = (), Error = eth2_libp2p::error::Error> {
-    futures::future::poll_fn(move || -> Result<_, eth2_libp2p::error::Error> {
+) -> impl futures::Future<Item = (), Error = libp2p_wrapper::error::Error> {
+    futures::future::poll_fn(move || -> Result<_, libp2p_wrapper::error::Error> {
         loop {
             // poll the network channel
             match network_recv.poll() {
@@ -105,10 +105,10 @@ fn network_service(
                 },
                 Ok(Async::NotReady) => break,
                 Ok(Async::Ready(None)) => {
-                    return Err(eth2_libp2p::error::Error::from("Network channel closed"));
+                    return Err(libp2p_wrapper::error::Error::from("Network channel closed"));
                 }
                 Err(_) => {
-                    return Err(eth2_libp2p::error::Error::from("Network channel error"));
+                    return Err(libp2p_wrapper::error::Error::from("Network channel error"));
                 }
             }
         }

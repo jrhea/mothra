@@ -2,8 +2,8 @@ extern crate getopts;
 use std::sync::mpsc;
 use std::{thread, time};
 use slog::{info, o, Drain};
-use eth2_libp2p::Message;
-use mothra::api_libp2p::api;
+use libp2p_wrapper::Message;
+use mothra::mothra_api::api;
 
 fn main() {
 

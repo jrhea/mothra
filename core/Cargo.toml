@@ -1,19 +1,29 @@
 [package]
-name = "eth2-libp2p"
-version = "0.1.0"
-authors = ["Age Manning <Age@AgeManning.com>"]
+name = "mothra"
+version = "0.0.1"
+authors = ["Jonny Rhea <jonny.rhea@consensys.net>"]
 edition = "2018"
+include = [
+    "**/*.rs",
+    "Cargo.toml"
+]
 
 [dependencies]
+libp2p-wrapper =  { path = "src/libp2p-wrapper" }
 libp2p =  { git = "https://github.com/SigP/rust-libp2p", rev = "be5710bbde69d8c5be732c13ba64239e2f370a7b" }
 enr =  { git = "https://github.com/SigP/rust-libp2p/", rev = "be5710bbde69d8c5be732c13ba64239e2f370a7b", features = ["serde"] }
+parking_lot = "0.9.0"
+slog-term = "^2.4.0"
+slog-async = "^2.3.0"
+slog = { version = "^2.2.3" , features = ["max_level_trace"] }
+ctrlc = { version = "3.1.1", features = ["termination"] }
+getopts = "0.2"
 clap = "2.32.0"
-parking_lot = "0.7"
 serde = "1.0"
 serde_derive = "1.0"
-slog = { version = "^2.4.1" , features = ["max_level_trace"] }
 tokio = "0.1.16"
 futures = "0.1.25"
+exit-future = "0.1.3"
 error-chain = "0.12.0"
 tokio-timer = "0.2.10"
 dirs = "2.0.1"
@@ -22,3 +32,6 @@ smallvec = "0.6.10"
 fnv = "1.0.6"
 unsigned-varint = "0.2.2"
 bytes = "0.4.12"
+env_logger = "0.6.0"
+tokio-stdin-stdout = "0.1"
+
