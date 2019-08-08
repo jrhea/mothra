@@ -39,7 +39,7 @@ pub extern fn libp2p_init() {
 
         let network_message = rx2.recv().unwrap();
         if network_message.command == "GOSSIP".to_string() {
-            info!(log,"receieved a network message!!!!!!!!{:?}",String::from_utf8(network_message.value))
+            info!(log,"Receieved the following message from the network {:?}",String::from_utf8(network_message.value))
         }
     }
 }

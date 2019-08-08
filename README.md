@@ -45,12 +45,18 @@ Install the Rust compiler and package manager:
 
 ```
 
+`tmux` is the last prereq, but it is optional.  Installing it will make running the demo easier:
+
+```sh
+
+> brew install tmux
+
+```
+
 
 ### Build Mothra
 
-Building is easy.
-
-First clone the repo:
+Building is easy.  First, clone the repo:
 
 ```sh
 
@@ -69,7 +75,18 @@ Next cd into the project's root dir and build:
 ### Run sample app
 
 The sample app demonstrates two clients using Disv5 to find each other and the use of GossipSub to send messages back and forth.
-If you have followed all the instructions above, then it should work.  In one terminal run:
+
+If you have `tmux` installed, it is a little simpler to run:
+
+```sh
+
+> cd examples/c && sh peerDemo.sh
+
+```
+
+If you don't have `tmux` installed and don't want to, then as long as you have followed all the instructions above, then it should work.  
+
+In one terminal run:
 
 ```sh
 

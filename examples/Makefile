@@ -2,14 +2,8 @@ SHELL := /bin/sh
 
 include ../config.mk
 
-CC = gcc
-
-.PHONY : bindings clean
-
-examples:
-	#@echo $(OS_LFLAGS)
-	$(shell mkdir -p $(ROOT_DIR)/bin)
-	$(CC) mothra.c -L$(ROOT_DIR)/bin/ -lmothra -o $(ROOT_DIR)/bin/mothra
+examples: 
+	cd $(EXAMPLES_DIR) && make $@
 
 clean:
-	rm -rf $(ROOT_DIR)/bin/mothra
+	cd $(EXAMPLES_DIR) && make $@
