@@ -12,4 +12,5 @@ ROOT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 CORE_DIR:=core
 BIND_DIR:=bindings
 CBIND_DIR:=c
+JBIND_DIR:=java
 EXAMPLES_DIR:=examples

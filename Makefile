@@ -2,17 +2,22 @@ SHELL := /bin/sh
 
 include config.mk
 
-.PHONY : all c-bindings rust
+.PHONY : all bindings c-bindings java-bindings rust
 .DEFAULT_GOAL : all
 
 mash: clean all
 
-all: c-bindings examples
+all: bindings examples
 
-examples: rust
+examples: bindings
 	cd $(EXAMPLES_DIR) && make $@
 
+bindings: c-bindings java-bindings
+
 c-bindings: rust
+	cd $(BIND_DIR) && make $@
+
+java-bindings: rust
 	cd $(BIND_DIR) && make $@
 
 rust: 
