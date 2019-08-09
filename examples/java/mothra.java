@@ -1,5 +1,5 @@
 public class mothra {
-    public static final String NAME = "mothrajni"; 
+    public static final String NAME = "mothra-java"; 
     public static native void StartLibP2P();
     static {
         try {

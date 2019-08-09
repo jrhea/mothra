@@ -105,9 +105,8 @@ fn gossip( mut network_send: mpsc::UnboundedSender<NetworkMessage>, message: Vec
 
 fn config() -> ArgMatches<'static> {
     let mut args: Vec<String> = env::args().collect();
-    let some_arg = "app";
+    let some_arg = "example";
     args.retain(|x| x != some_arg);
-    //args.remove_item(&String::from("app"));
     App::new("Artemis")
     .version("0.0.1")
     .author("Your Mom")

@@ -3,8 +3,8 @@ SHELL := /bin/sh
 include ../config.mk
 
 examples: 
-	cd $(CBIND_DIR) && make $@
-	cd $(JBIND_DIR) && make $@
+	cd c && make $@
+	cd java && make $@
 
 clean:
 	cd $(EXAMPLES_DIR) && make $@

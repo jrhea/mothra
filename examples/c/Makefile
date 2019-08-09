@@ -2,14 +2,12 @@ SHELL := /bin/sh
 
 include ../../config.mk
 
-CC:=gcc
-INCLUDES:=-I$(ROOT_DIR)/bindings/c/
+INCLUDES:=-I$(CBIND_DIR)
 
 .PHONY : examples clean
 
 examples:
-	$(shell mkdir -p $(ROOT_DIR)/bin)
-	$(CC) mothra.c $(INCLUDES) -L$(ROOT_DIR)/bin/ -lmothra -o $(ROOT_DIR)/bin/mothra
+	$(CC) example.c $(INCLUDES) -L$(OUT_DIR)/ -lmothra-c -o $(OUT_DIR)/example
 
 clean:
-	rm -rf $(ROOT_DIR)/bin/mothra*
+	rm -rf $(OUT_DIR)/example*

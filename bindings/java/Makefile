@@ -3,15 +3,15 @@ SHELL := /bin/sh
 include ../../config.mk
 
 JAVA_INCLUDES = -I$(JAVA_HOME)/include/$(OS) -I$(JAVA_HOME)/include
-CC = gcc
 CFLAGS = -O2 -fPIC
 LFLAGS = -shared
+TARGET:=$(OUT_DIR)/libmothra-java.$(EXT)
 
 .PHONY : bindings clean
 
 java-bindings:
-	$(shell mkdir -p $(ROOT_DIR)/bin)
-	$(CC) *.c $(JAVA_INCLUDES) -L$(ROOT_DIR)/$(CORE_DIR)/target/release -lmothra $(CFLAGS) $(LFLAGS) -o $(ROOT_DIR)/bin/libmothrajni.$(EXT)
+	$(shell mkdir -p $(OUT_DIR))
+	$(CC) *.c $(JAVA_INCLUDES) -L$(CORE_DIR)/target/release -lmothra $(CFLAGS) $(LFLAGS) -o $(TARGET)
 
 clean:
-	rm -rf $(ROOT_DIR)/bin/mothra*
+	rm -rf $(OUT_DIR)/mothra*
