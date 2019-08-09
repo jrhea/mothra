@@ -2,16 +2,20 @@ SHELL := /bin/sh
 
 include ../../config.mk
 
-JAVA_HOME = $(shell java -XshowSettings:properties -version 2>&1 > /dev/null | grep 'java.home' | sed 's/\s*java.home = //' | sed 's/\/jre//')
 CLASS_PATH = $(ROOT_DIR)/bin/
 vpath %.class $(CLASS_PATH)
 
 NAME = mothra
 
-examples: app.class
+examples: clean app.class
 
 %.class:
 	javac $*.java -d $(ROOT_DIR)/bin/
+	#cd $(ROOT_DIR)/bin \
+	#&& printf "Main-Class: app\n" > manifest.txt \
+	#&& jar -cvmf manifest.txt app.jar *.class \
+	#&& /Library/Java/JavaVirtualMachines/jdk1.8.0_192.jdk/Contents/Home/bin/javapackager create-image --runtime-image image --input . --output . --name mothra --main-jar app.jar
 
 clean:
 	rm -rf $(ROOT_DIR)/bin/*.class
+	rm -rf $(ROOT_DIR)/bin/*.jar

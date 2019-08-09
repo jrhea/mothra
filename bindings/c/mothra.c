@@ -1,5 +1,5 @@
 #include "mothra.h"
 
-int libp2p (void) {
+void libp2p_init_bind () {
     libp2p_init();
 }

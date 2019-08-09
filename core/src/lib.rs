@@ -7,11 +7,6 @@ use libp2p_wrapper::Message;
 use mothra_api::api;
 
 #[no_mangle]
-pub extern fn print_hello_from_rust() {
-    println!("Hello from Rust");
-}
-
-#[no_mangle]
 pub extern fn libp2p_init() {
 
     let decorator = slog_term::TermDecorator::new().build();

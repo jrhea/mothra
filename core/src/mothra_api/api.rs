@@ -2,13 +2,15 @@ use clap::ArgMatches;
 use futures::prelude::*;
 use std::sync::mpsc as sync;
 use std::time::{Duration, Instant};
+use std::env;
+use std::process;
 use slog::{debug, info, o, warn};
 use tokio::runtime::TaskExecutor;
 use tokio::runtime::Builder;
 use tokio::timer::Interval;
 use tokio_timer::clock::Clock;
 use futures::Future;
-use clap::{App, Arg};
+use clap::{App, Arg, AppSettings};
 use libp2p_wrapper::{NetworkConfig, TopicBuilder, BEACON_PUBSUB_TOPIC,Message};
 use tokio::sync::mpsc;
 use super::network::{Network,NetworkMessage};
@@ -102,10 +104,16 @@ fn gossip( mut network_send: mpsc::UnboundedSender<NetworkMessage>, message: Vec
 
 
 fn config() -> ArgMatches<'static> {
+    let mut args: Vec<String> = env::args().collect();
+    let some_arg = "app";
+    args.retain(|x| x != some_arg);
+    //args.remove_item(&String::from("app"));
     App::new("Artemis")
     .version("0.0.1")
     .author("Your Mom")
     .about("Eth 2.0 Client")
+    .setting(AppSettings::TrailingVarArg)
+    .setting(AppSettings::DontDelimitTrailingValues)
     .arg(
         Arg::with_name("datadir")
             .long("datadir")
@@ -173,5 +181,9 @@ fn config() -> ArgMatches<'static> {
             .help("Sets the verbosity level")
             .takes_value(true),
     )
-    .get_matches()
+   .get_matches_from_safe(args.iter())
+        .unwrap_or_else(|e| {
+            eprintln!("{}", e);
+            process::exit(1);
+        })
 }

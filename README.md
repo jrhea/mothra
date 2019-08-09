@@ -72,7 +72,14 @@ Next cd into the project's root dir and build:
 
 ```
 
-### Run sample app
+### Sample App
+
+Here is a screenshot of the sample app in action:
+
+![demo](./resources/demo.jpeg)
+
+
+#### Run sample app (C)
 
 The sample app demonstrates two clients using Disv5 to find each other and the use of GossipSub to send messages back and forth.
 
@@ -102,6 +109,14 @@ In a second terminal run:
 
 ```
 
-Here is a screenshot of the sample app in action:
+#### Run sample app (Java)
 
-![demo](./resources/demo.jpeg)
+The sample app demonstrates two clients using Disv5 to find each other and the use of GossipSub to send messages back and forth.
+
+If you have `tmux` installed, it is a little simpler to run:
+
+```sh
+
+> cd examples/java && sh peerDemo.sh
+
+```

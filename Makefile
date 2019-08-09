@@ -2,7 +2,7 @@ SHELL := /bin/sh
 
 include config.mk
 
-.PHONY : all bindings c-bindings java-bindings rust
+.PHONY : all examples bindings c-bindings java-bindings rust
 .DEFAULT_GOAL : all
 
 mash: clean all
