@@ -1,6 +1,6 @@
 public class mothra {
     public static final String NAME = "mothra-java"; 
-    public static native void StartLibP2P();
+    public static native void StartLibP2P(String[] args);
     static {
         try {
             System.loadLibrary ( NAME ) ;

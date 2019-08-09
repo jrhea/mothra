@@ -28,7 +28,7 @@ pub extern fn libp2p_start(args_c_char: *mut *mut c_char, length: c_int) {
             args_vec.push(s.to_string());
             }
             Err(_) => {
-            warn!(log,"Invalid libp2p config provided! ")
+                warn!(log,"Invalid libp2p config provided! ")
             }
         }
         idx += 1;
