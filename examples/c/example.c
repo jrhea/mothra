@@ -1,5 +1,7 @@
 #include "mothra.h"
+#include <stdio.h>
 
-int main (void) {
-    libp2p_init_bind();
+int main (int argc, char** argv) {
+    printf("FOO1\n");
+    libp2p_start_bind(argv,argc);
 }

@@ -21,7 +21,7 @@ pub const HEARTBEAT_INTERVAL_SECONDS: u64 = 15;
 /// Create a warning log whenever the peer count is at or below this value.
 pub const WARN_PEER_COUNT: usize = 1;
 
-pub fn start(local_tx: &sync::Sender<Message>,local_rx: &sync::Receiver<Message>, log: slog::Logger) {
+pub fn start(args: ArgMatches, local_tx: &sync::Sender<Message>,local_rx: &sync::Receiver<Message>, log: slog::Logger) {
     info!(log,"Initializing libP2P....");
     let runtime = Builder::new()
         .name_prefix("api-")
@@ -30,7 +30,6 @@ pub fn start(local_tx: &sync::Sender<Message>,local_rx: &sync::Receiver<Message>
         .map_err(|e| format!("{:?}", e)).unwrap();
     let executor = runtime.executor();
     let mut network_config = NetworkConfig::new();
-    let args = config();
     network_config.apply_cli_args(&args).unwrap();
     let network_logger = log.new(o!("Network" => "Network"));
     let (network_tx, network_rx) = sync::channel();
@@ -102,11 +101,8 @@ fn gossip( mut network_send: mpsc::UnboundedSender<NetworkMessage>, message: Vec
     });
 }
 
-
-fn config() -> ArgMatches<'static> {
-    let mut args: Vec<String> = env::args().collect();
-    let some_arg = "example";
-    args.retain(|x| x != some_arg);
+pub fn config(mut args: Vec<String>) -> ArgMatches<'static> {
+    
     App::new("Artemis")
     .version("0.0.1")
     .author("Your Mom")
