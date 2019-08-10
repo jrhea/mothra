@@ -13,9 +13,11 @@ use slog::{info, debug, warn, o, Drain};
 use libp2p_wrapper::Message;
 use mothra_api::api;
 
-
-
 thread_local!(static SEND: RefCell<Option<Sender<Message>>> = RefCell::new(None));
+
+extern {
+    fn libp2p_receive_gossip(message_c_char: *mut c_char);
+}
 
 #[no_mangle]
 pub extern fn libp2p_start(args_c_char: *mut *mut c_char, length: c_int) {
@@ -58,7 +60,11 @@ pub extern fn libp2p_start(args_c_char: *mut *mut c_char, length: c_int) {
             thread::sleep(dur);
             let network_message = rx2.recv().unwrap();
             if network_message.command == "GOSSIP".to_string() {
-                info!(log,"Receieved the following message from the network {:?}",String::from_utf8(network_message.value))
+                let message = String::from_utf8(network_message.value).unwrap();
+                //info!(log,"Receieved the following message from the network {:?}",message);
+                unsafe {
+                    libp2p_receive_gossip(message.as_ptr() as *mut i8);
+                }
             }
         }     
     });

@@ -7,4 +7,5 @@ examples:
 	cd java && make $@
 
 clean:
-	cd $(EXAMPLES_DIR) && make $@
+	cd c && make $@
+	cd java && make $@
