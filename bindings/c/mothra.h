@@ -6,7 +6,7 @@ extern "C" {
 #endif
 
 void libp2p_start(char**, int length);
-void libp2p_send_gossip(char*, int length);
+void libp2p_send_gossip(char*);
 
 #ifdef __cplusplus
 }

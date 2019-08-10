@@ -6,7 +6,8 @@
 extern "C" {
 #endif
 
-JNIEXPORT void JNICALL Java_mothra_StartLibP2P (JNIEnv *, jclass, jobjectArray);
+JNIEXPORT void JNICALL Java_mothra_Start (JNIEnv *, jclass, jobjectArray);
+JNIEXPORT void JNICALL Java_mothra_SendGossip(JNIEnv *, jclass, jstring);
 
 #ifdef __cplusplus
 }

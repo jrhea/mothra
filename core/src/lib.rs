@@ -66,7 +66,7 @@ pub extern fn libp2p_start(args_c_char: *mut *mut c_char, length: c_int) {
 }
 
 #[no_mangle]
-pub extern fn libp2p_send_gossip(message_c_char: *mut c_char, length: c_int) {
+pub extern fn libp2p_send_gossip(message_c_char: *mut c_char) {
     let mut message_str: String = "".to_string();
     let message_cstr = unsafe { CStr::from_ptr(message_c_char) };
     match message_cstr.to_str() {

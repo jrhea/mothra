@@ -4,7 +4,7 @@
 #include "mothra-jni.h"
 #include "../c/mothra.h"
 
-JNIEXPORT void JNICALL Java_mothra_StartLibP2P (JNIEnv *jenv, jclass jcls, jobjectArray jargs){
+JNIEXPORT void JNICALL Java_mothra_Start (JNIEnv *jenv, jclass jcls, jobjectArray jargs){
     int length = (*jenv)->GetArrayLength(jenv, jargs);
     char **args = (char **) malloc(length * sizeof(char *));
     if(args){
@@ -24,4 +24,14 @@ JNIEXPORT void JNICALL Java_mothra_StartLibP2P (JNIEnv *jenv, jclass jcls, jobje
         free(args[i]);
     }
     free(args);
+}
+
+JNIEXPORT void JNICALL Java_mothra_SendGossip (JNIEnv *jenv, jclass jcls, jstring jmessage){
+  char *message = (char *) 0 ;
+  if (jmessage) {
+    message = (char *)(*jenv)->GetStringUTFChars(jenv, jmessage, 0);
+    if (!message) return ;
+  }
+  libp2p_send_gossip(message);
+  if (message) (*jenv)->ReleaseStringUTFChars(jenv, jmessage, (const char *)message);
 }
