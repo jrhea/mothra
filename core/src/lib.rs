@@ -1,6 +1,6 @@
 pub mod mothra_api;
 extern crate getopts;
-use std::sync::mpsc;
+use std::sync::mpsc::{channel,Sender,Receiver};
 use std::{thread, time};
 use std::ffi::CStr;
 use std::os::raw::{c_char,c_int};
@@ -8,9 +8,14 @@ use std::io::Cursor;
 use std::convert::TryFrom;
 use std::mem;
 use std::ops::Range;
+use std::cell::RefCell;
 use slog::{info, debug, warn, o, Drain};
 use libp2p_wrapper::Message;
 use mothra_api::api;
+
+
+
+thread_local!(static SEND: RefCell<Option<Sender<Message>>> = RefCell::new(None));
 
 #[no_mangle]
 pub extern fn libp2p_start(args_c_char: *mut *mut c_char, length: c_int) {
@@ -34,26 +39,50 @@ pub extern fn libp2p_start(args_c_char: *mut *mut c_char, length: c_int) {
         idx += 1;
     }
     let args = api::config(args_vec);
-    let (tx1, rx1) = mpsc::channel();
-    let (tx2, rx2) = mpsc::channel();
+    let (mut tx1, rx1) = channel();
+    let (tx2, rx2) = channel();
 
     let nlog = log.clone();
     thread::spawn(move || {
         api::start(args, &tx2, &rx1, nlog.new(o!("API" => "start()")));
     });
     
-    let dur = time::Duration::from_millis(500);
-    loop{
-        thread::sleep(dur);
-        let message = Message {
-            command: "GOSSIP".to_string(), 
-            value: "Blah".as_bytes().to_vec()
-        };
-        tx1.send(message).unwrap();
+    SEND.with(|tx_cell| {
+        tx_cell.swap(&RefCell::new(Some(tx1)));
+    });
 
-        let network_message = rx2.recv().unwrap();
-        if network_message.command == "GOSSIP".to_string() {
-            info!(log,"Receieved the following message from the network {:?}",String::from_utf8(network_message.value))
+
+    thread::spawn(move || {
+        let dur = time::Duration::from_millis(1000);
+        loop{
+            thread::sleep(dur);
+            let network_message = rx2.recv().unwrap();
+            if network_message.command == "GOSSIP".to_string() {
+                info!(log,"Receieved the following message from the network {:?}",String::from_utf8(network_message.value))
+            }
+        }     
+    });
+
+}
+
+#[no_mangle]
+pub extern fn libp2p_send_gossip(message_c_char: *mut c_char, length: c_int) {
+    let mut message_str: String = "".to_string();
+    let message_cstr = unsafe { CStr::from_ptr(message_c_char) };
+    match message_cstr.to_str() {
+        Ok(s) => {
+            message_str = s.to_string();
+        }
+        Err(_) => {
+            std::println!("Invalid libp2p config provided! ");
         }
     }
+
+    SEND.with(|tx_cell| {
+        let message = Message {
+            command: "GOSSIP".to_string(), 
+            value: message_str.as_bytes().to_vec()
+        };
+        tx_cell.borrow_mut().as_mut().unwrap().send(message);
+    });
 }

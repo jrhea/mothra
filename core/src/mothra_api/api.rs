@@ -101,7 +101,7 @@ fn gossip( mut network_send: mpsc::UnboundedSender<NetworkMessage>, message: Vec
     });
 }
 
-pub fn config(mut args: Vec<String>) -> ArgMatches<'static> {
+pub fn config(args: Vec<String>) -> ArgMatches<'static> {
     
     App::new("Artemis")
     .version("0.0.1")
