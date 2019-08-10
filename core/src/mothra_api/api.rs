@@ -41,7 +41,7 @@ pub fn start(args: ArgMatches, local_tx: &sync::Sender<Message>,local_rx: &sync:
     ).unwrap();
     
     monitor(&network, executor, log.clone());
-    
+
     loop {
         let local_message = local_rx.recv().unwrap();
         if local_message.command == "GOSSIP".to_string() {

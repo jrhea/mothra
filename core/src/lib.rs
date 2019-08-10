@@ -55,13 +55,10 @@ pub extern fn libp2p_start(args_c_char: *mut *mut c_char, length: c_int) {
 
 
     thread::spawn(move || {
-        let dur = time::Duration::from_millis(1000);
         loop{
-            thread::sleep(dur);
             let network_message = rx2.recv().unwrap();
             if network_message.command == "GOSSIP".to_string() {
                 let message = String::from_utf8(network_message.value).unwrap();
-                //info!(log,"Receieved the following message from the network {:?}",message);
                 unsafe {
                     libp2p_receive_gossip(message.as_ptr() as *mut i8);
                 }

@@ -129,7 +129,7 @@ impl Stream for Service {
                         topics,
                         message,
                     } => {
-                        debug!(self.log, "Pubsub message received: {:?}", message);
+                        //debug!(self.log, "Pubsub message received: {:?}", message);
                         match *message.clone() {
                             PubsubMessage::Other(value) => {
                                 self.tx.lock().unwrap().send(Message {
@@ -145,7 +145,7 @@ impl Stream for Service {
                         })));
                     }
                     BehaviourEvent::RPC(peer_id, event) => {
-                        info!(self.log,"Received RPC message from: {:?}", peer_id);
+                        //debug!(self.log,"Received RPC message from: {:?}", peer_id);
                         return Ok(Async::Ready(Some(Libp2pEvent::RPC(peer_id, event))));
                     }
                     BehaviourEvent::PeerDialed(peer_id) => {
