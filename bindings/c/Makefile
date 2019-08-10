@@ -2,14 +2,10 @@ SHELL := /bin/sh
 
 include ../../config.mk
 
-CFLAGS:=-O2 -fPIC
-LFLAGS:=-shared
-TARGET:=$(OUT_DIR)/libmothra-c.$(EXT)
-
-.PHONY: c-bindings clean
+.PHONY : examples clean
 
 c-bindings:
-	$(CC) mothra.c -L$(CORE_DIR)/target/release -lmothra $(CFLAGS) $(LFLAGS) -o $(TARGET)
+	@echo C bindings are header only files
 
 clean:
-	rm -rf $(OUT_DIR)/mothra*
+	rm -rf $(OUT_DIR)/libmothra.$(EXT)

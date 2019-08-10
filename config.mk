@@ -17,3 +17,5 @@ CBIND_DIR:=$(BIND_DIR)/c
 JBIND_DIR:=$(BIND_DIR)/java
 EXAMPLES_DIR:=$(ROOT_DIR)/examples
 $(shell mkdir -p $(OUT_DIR))
+
+debug-%: ; @echo $*=$($*)

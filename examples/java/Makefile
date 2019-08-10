@@ -5,7 +5,7 @@ include ../../config.mk
 CLASS_PATH = $(OUT_DIR)/
 vpath %.class $(CLASS_PATH)
 
-examples: clean *.class
+examples: *.class
 
 %.class:
 	javac $*.java -d $(OUT_DIR)/

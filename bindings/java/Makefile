@@ -7,7 +7,7 @@ CFLAGS = -O2 -fPIC
 LFLAGS = -shared
 TARGET:=$(OUT_DIR)/libmothra-java.$(EXT)
 
-.PHONY : bindings clean
+.PHONY : java-bindings clean
 
 java-bindings:
 	$(shell mkdir -p $(OUT_DIR))
