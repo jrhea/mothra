@@ -15,7 +15,7 @@ public class example {
         while(true){
             System.out.print("Enter a message to send: ");
             String message = scanner.next();
-            mothra.SendGossip(message);
+            mothra.SendGossip(message.getBytes());
         }
 
     }

@@ -12,23 +12,25 @@ JNIEXPORT void JNICALL Java_mothra_Init(JNIEnv* jenv, jclass jcls)
    assert (rs == JNI_OK);
 }
 
-void receive_gossip(char* message) {
+void receive_gossip(unsigned char* message, int length) {
     JNIEnv *jenv;
     jint rs = (*jvm)->AttachCurrentThread(jvm, (void**)&jenv, NULL);
     assert (rs == JNI_OK);
     if(jenv != NULL) {
         jclass mothra_class;
         jmethodID receivegossip_method;
-        jstring jmessage;
+        jbyteArray jmessage;
         mothra_class = (*jenv)->FindClass(jenv, "mothra");
         if(!mothra_class){
             detach(jenv);
         }
-        jmessage = (*jenv)->NewStringUTF(jenv, message);
+        //Put the native unsigned chars in the java byte array
+        jmessage = (*jenv)->NewByteArray(jenv, length);
+        (*jenv)->SetByteArrayRegion(jenv, jmessage, 0, length, (jbyte *)message);
         if(!jmessage){
             detach(jenv);
         }
-        receivegossip_method = (*jenv)->GetStaticMethodID(jenv, mothra_class, "ReceiveGossip", "(Ljava/lang/String;)V");
+        receivegossip_method = (*jenv)->GetStaticMethodID(jenv, mothra_class, "ReceiveGossip", "([B)V");
         if(!receivegossip_method){
             detach(jenv);
         }

@@ -133,7 +133,7 @@ impl Stream for Service {
                             PubsubMessage::Other(value) => {
                                 self.tx.lock().unwrap().send(Message {
                                     command: "GOSSIP".to_string(),
-                                    value: value.as_bytes().to_vec()
+                                    value: value
                                 }).unwrap();
                             },
                         }

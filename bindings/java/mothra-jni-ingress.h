@@ -8,7 +8,7 @@ extern "C" {
 
 JNIEXPORT void JNICALL Java_mothra_Init(JNIEnv*,jclass);
 
-void receive_gossip(char*);
+void receive_gossip(unsigned char*, int);
 
 void detach(JNIEnv* );
 

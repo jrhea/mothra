@@ -75,8 +75,7 @@ impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<GossipsubE
             GossipsubEvent::Message(gs_msg) => {
                 //debug!(self.log, "Received GossipEvent"; "msg" => format!("{:?}", gs_msg));
 
-                // TODO: this will have to be changed when passing real blocks
-                let pubsub_message = PubsubMessage::Other(String::from_utf8(gs_msg.data).unwrap());
+                let pubsub_message = PubsubMessage::Other(gs_msg.data);
 
                 self.events.push(BehaviourEvent::GossipMessage {
                     source: gs_msg.source,
@@ -189,5 +188,5 @@ pub enum PubsubMessage {
     //Block(BeaconBlock<types::MinimalEthSpec>),
     /// Gossipsub message providing notification of a new attestation.
     //Attestation(Attestation<types::MinimalEthSpec>),
-    Other(String)
+    Other(Vec<u8>)
 }

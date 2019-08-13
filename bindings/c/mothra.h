@@ -6,9 +6,9 @@ extern "C" {
 #endif
 
 extern void libp2p_start(char**, int length);
-extern void libp2p_send_gossip(char*);
+extern void libp2p_send_gossip(unsigned char*, int length);
 
-void receive_gossip(char*);
+void receive_gossip(unsigned char*);
 
 
 #ifdef __cplusplus

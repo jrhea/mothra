@@ -27,12 +27,14 @@ JNIEXPORT void JNICALL Java_mothra_Start (JNIEnv *jenv, jclass jcls, jobjectArra
     free(args);
 }
 
-JNIEXPORT void JNICALL Java_mothra_SendGossip (JNIEnv *jenv, jclass jcls, jstring jmessage){
-  char *message = (char *) 0 ;
-  if (jmessage) {
-    message = (char *)(*jenv)->GetStringUTFChars(jenv, jmessage, 0);
-    if (!message) return ;
-  }
-  libp2p_send_gossip(message);
-  if (message) (*jenv)->ReleaseStringUTFChars(jenv, jmessage, (const char *)message);
+JNIEXPORT void JNICALL Java_mothra_SendGossip (JNIEnv *jenv, jclass jcls, jbyteArray jmessage){
+    int length = (*jenv)->GetArrayLength(jenv, jmessage);
+    jbyte *message = (jbyte *) 0 ;
+    if (jmessage) {
+        jboolean isCopy = JNI_TRUE;
+        message = (*jenv)->GetByteArrayElements(jenv,jmessage,&isCopy);
+        if (!message) return ;
+    }
+    libp2p_send_gossip(message,length);
+    if (message) (*jenv)->ReleaseByteArrayElements(jenv, jmessage, message, 0);
 }

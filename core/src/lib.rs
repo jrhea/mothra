@@ -3,12 +3,13 @@ extern crate getopts;
 use std::sync::mpsc::{channel,Sender,Receiver};
 use std::{thread, time};
 use std::ffi::{CStr,CString};
-use std::os::raw::{c_char,c_int};
+use std::os::raw::{c_uchar,c_char,c_int};
 use std::io::Cursor;
 use std::convert::TryFrom;
 use std::mem;
 use std::ops::Range;
 use std::cell::RefCell;
+use cast::i16;
 use slog::{info, debug, warn, o, Drain};
 use libp2p_wrapper::Message;
 use mothra_api::api;
@@ -16,19 +17,18 @@ use mothra_api::api;
 thread_local!(static SEND: RefCell<Option<Sender<Message>>> = RefCell::new(None));
 
 extern {
-    fn receive_gossip(message_c_char: *mut c_char);
+    fn receive_gossip(message_c_char: *mut c_uchar, length: i16);
 }
 
 #[no_mangle]
-pub extern fn libp2p_start(args_c_char: *mut *mut c_char, length: c_int) {
+pub extern fn libp2p_start(args_c_char: *mut *mut c_char, length: isize) {
     let decorator = slog_term::TermDecorator::new().build();
     let drain = slog_term::CompactFormat::new(decorator).build().fuse();
     let drain = slog_async::Async::new(drain).build().fuse();
     let slog = slog::Logger::root(drain, o!());
     let log = slog.new(o!("API" => "init()"));
     let mut args_vec = Vec::<String>::new();
-    let mut idx: isize = 0;
-    for i in 0..length {
+    for idx in 0..length {
         let args_cstr = unsafe { CStr::from_ptr(*args_c_char.offset(idx)) };
         match args_cstr.to_str() {
             Ok(s) => {
@@ -38,7 +38,6 @@ pub extern fn libp2p_start(args_c_char: *mut *mut c_char, length: c_int) {
                 warn!(log,"Invalid libp2p config provided! ")
             }
         }
-        idx += 1;
     }
     let args = api::config(args_vec);
     let (mut tx1, rx1) = channel();
@@ -59,11 +58,13 @@ pub extern fn libp2p_start(args_c_char: *mut *mut c_char, length: c_int) {
             match rx2.recv(){
                 Ok(network_message) => {
                     if network_message.command == "GOSSIP".to_string() {
+                        
+                        let length = i16(network_message.value.len()).unwrap();
                         match CString::new(network_message.value){ //adds null terminator
                             Ok(message_c_str) => {
                                 let mut message_ptr = message_c_str.as_ptr();
                                 unsafe {
-                                    receive_gossip(message_ptr as *mut i8);
+                                    receive_gossip(message_ptr as *mut u8, length);
                                 }
                             }
                             Err(_) => {
@@ -82,13 +83,12 @@ pub extern fn libp2p_start(args_c_char: *mut *mut c_char, length: c_int) {
 }
 
 #[no_mangle]
-pub extern fn libp2p_send_gossip(message_c_char: *mut c_char) {
-    let message_cstr = unsafe { CStr::from_ptr(message_c_char) };
-    let mut message_bytes: Vec::<u8> = message_cstr.to_bytes().to_vec();
+pub extern fn libp2p_send_gossip(message_c_uchar: *mut c_uchar, length: usize) {
+    let mut message_bytes = unsafe { std::slice::from_raw_parts_mut(message_c_uchar, length) };
     SEND.with(|tx_cell| {
         let message = Message {
             command: "GOSSIP".to_string(), 
-            value: message_bytes
+            value: message_bytes.to_vec()
         };
         tx_cell.borrow_mut().as_mut().unwrap().send(message);
     });
