@@ -123,7 +123,6 @@ impl Stream for Service {
             match self.swarm.poll() {
                 //Behaviour events
                 Ok(Async::Ready(Some(event))) => match event {
-                    // TODO: Stub here for debugging
                     BehaviourEvent::GossipMessage {
                         source,
                         topics,

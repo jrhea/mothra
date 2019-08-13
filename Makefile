@@ -8,9 +8,9 @@ c-mash: clean c
 
 java-mash: clean java
 
-c: c-examples
+c: clean-bin c-examples
 
-java: java-examples
+java: clean-bin java-examples
 
 c-examples: c-bindings
 	@echo ""
@@ -45,6 +45,8 @@ java-bindings-egress:
 	@echo Building Java bindings
 	cd $(BIND_DIR) && make $@
 
+clean-bin:
+	rm -f $(OUT_DIR)/*
 clean:
 	cd $(CORE_DIR) && make $@
 	cd $(BIND_DIR) && make $@

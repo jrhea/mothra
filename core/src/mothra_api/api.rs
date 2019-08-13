@@ -4,6 +4,7 @@ use std::sync::mpsc as sync;
 use std::time::{Duration, Instant};
 use std::env;
 use std::process;
+use std::{thread, time};
 use slog::{debug, info, o, warn};
 use tokio::runtime::TaskExecutor;
 use tokio::runtime::Builder;
@@ -41,14 +42,27 @@ pub fn start(args: ArgMatches, local_tx: &sync::Sender<Message>,local_rx: &sync:
     ).unwrap();
     
     monitor(&network, executor, log.clone());
-
+    let dur = time::Duration::from_millis(100);
     loop {
-        let local_message = local_rx.recv().unwrap();
-        if local_message.command == "GOSSIP".to_string() {
-            gossip(network_send.clone(), local_message.value.to_vec(),log.new(o!("API" => "gossip()")));
+        match local_rx.try_recv(){
+            Ok(local_message) => {
+                if local_message.command == "GOSSIP".to_string() {
+                    gossip(network_send.clone(), local_message.value.to_vec(),log.new(o!("API" => "gossip()")));
+                }
+            }
+            Err(_) => {
+                
+            }
         }
-        let network_message = network_rx.recv().unwrap();
-        local_tx.send(network_message).unwrap();
+        match network_rx.try_recv(){
+            Ok(network_message) => {
+                local_tx.send(network_message).unwrap();
+            }
+            Err(_) => {
+                
+            }
+        }
+        thread::sleep(dur);
     }
 }
 

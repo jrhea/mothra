@@ -53,16 +53,27 @@ pub extern fn libp2p_start(args_c_char: *mut *mut c_char, length: c_int) {
         tx_cell.swap(&RefCell::new(Some(tx1)));
     });
 
-
+    ///Listen for messages rcvd from the network
     thread::spawn(move || {
         loop{
-            let network_message = rx2.recv().unwrap();
-            if network_message.command == "GOSSIP".to_string() {
-                let mut message = String::from_utf8(network_message.value).unwrap();
-                let mut message_c_str = CString::new(message).unwrap();  //adds null terminator
-                let mut message_ptr = message_c_str.as_ptr();
-                unsafe {
-                    receive_gossip(message_ptr as *mut i8);
+            match rx2.recv(){
+                Ok(network_message) => {
+                    if network_message.command == "GOSSIP".to_string() {
+                        match CString::new(network_message.value){ //adds null terminator
+                            Ok(message_c_str) => {
+                                let mut message_ptr = message_c_str.as_ptr();
+                                unsafe {
+                                    receive_gossip(message_ptr as *mut i8);
+                                }
+                            }
+                            Err(_) => {
+                                std::println!("Rcv Thread Error: CString::new(message) ");
+                            }
+                        }
+                    }
+                }
+                Err(_) => {
+                    std::println!("Rcv Thread Error: rx2.recv().unwrap()");
                 }
             }
         }     
@@ -72,21 +83,12 @@ pub extern fn libp2p_start(args_c_char: *mut *mut c_char, length: c_int) {
 
 #[no_mangle]
 pub extern fn libp2p_send_gossip(message_c_char: *mut c_char) {
-    let mut message_str: String = "".to_string();
     let message_cstr = unsafe { CStr::from_ptr(message_c_char) };
-    match message_cstr.to_str() {
-        Ok(s) => {
-            message_str = s.to_string();
-        }
-        Err(_) => {
-            std::println!("Invalid libp2p config provided! ");
-        }
-    }
-
+    let mut message_bytes: Vec::<u8> = message_cstr.to_bytes().to_vec();
     SEND.with(|tx_cell| {
         let message = Message {
             command: "GOSSIP".to_string(), 
-            value: message_str.as_bytes().to_vec()
+            value: message_bytes
         };
         tx_cell.borrow_mut().as_mut().unwrap().send(message);
     });
