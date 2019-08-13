@@ -15,20 +15,28 @@ examples: bindings
 
 bindings: c-bindings java-bindings
 
-c-bindings: rust
-	@echo ""
-	@echo Building C bindings
-	cd $(BIND_DIR) && make $@
+c-bindings:
+	# @echo ""
+	# @echo Building C bindings
+	# cd $(BIND_DIR) && make $@
+	# @echo ""
+	# @echo Building Rust bindings
+	# cd $(CORE_DIR) && make $@
 
-java-bindings: rust
+java-bindings: java-bindings-ingress java-bindings-egress
+
+java-bindings-ingress:
 	@echo ""
 	@echo Building Java bindings
 	cd $(BIND_DIR) && make $@
-
-rust:
 	@echo ""
 	@echo Building Rust bindings
 	cd $(CORE_DIR) && make $@
+
+java-bindings-egress:
+	@echo ""
+	@echo Building Java bindings
+	cd $(BIND_DIR) && make $@
 
 clean:
 	cd $(CORE_DIR) && make $@

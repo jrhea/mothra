@@ -16,7 +16,7 @@ use mothra_api::api;
 thread_local!(static SEND: RefCell<Option<Sender<Message>>> = RefCell::new(None));
 
 extern {
-    fn libp2p_receive_gossip(message_c_char: *mut c_char);
+    fn receive_gossip(message_c_char: *mut c_char);
 }
 
 #[no_mangle]
@@ -60,7 +60,7 @@ pub extern fn libp2p_start(args_c_char: *mut *mut c_char, length: c_int) {
             if network_message.command == "GOSSIP".to_string() {
                 let message = String::from_utf8(network_message.value).unwrap();
                 unsafe {
-                    libp2p_receive_gossip(message.as_ptr() as *mut i8);
+                    receive_gossip(message.as_ptr() as *mut i8);
                 }
             }
         }     

@@ -5,11 +5,14 @@
 extern "C" {
 #endif
 
-void libp2p_start(char**, int length);
-void libp2p_send_gossip(char*);
+extern void libp2p_start(char**, int length);
+extern void libp2p_send_gossip(char*);
+
+void receive_gossip(char*);
+
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // _MOTHRA_JNI_H_
+#endif // _MOTHRA_H_

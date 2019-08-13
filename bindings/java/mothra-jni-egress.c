@@ -1,8 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include "mothra-jni.h"
-#include "../c/mothra.h"
+#include "mothra-jni-egress.h"
 
 JNIEXPORT void JNICALL Java_mothra_Start (JNIEnv *jenv, jclass jcls, jobjectArray jargs){
     int length = (*jenv)->GetArrayLength(jenv, jargs);
