@@ -8,22 +8,14 @@ static JavaVM *jvm;
 
 JNIEXPORT void JNICALL Java_mothra_Init(JNIEnv* jenv, jclass jcls)
 {
-   printf("Java_mothra_Init: start\n");
    jint rs = (*jenv)->GetJavaVM(jenv, &jvm);
-   printf("Java_mothra_Init: rs = %i\n",rs);
    assert (rs == JNI_OK);
-   printf("Java_mothra_Init: end\n");
 }
 
 void receive_gossip(char* message) {
-
     JNIEnv *jenv;
-    printf("receive_gossip: before attach\n");
     jint rs = (*jvm)->AttachCurrentThread(jvm, (void**)&jenv, NULL);
-    printf("receive_gossip: rs = %i\n",rs);
-    printf("receive_gossip: after attach\n");
     assert (rs == JNI_OK);
-    printf("jenv: %p\n",jenv);
     if(jenv != NULL) {
         jclass mothra_class;
         jmethodID receivegossip_method;

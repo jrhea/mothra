@@ -64,11 +64,23 @@ Building is easy.  First, clone the repo:
 
 ```
 
+#### Build for C
+
 Next cd into the project's root dir and build:
 
 ```sh
 
-> make all
+> make c
+
+```
+
+#### Build for Java
+
+Next cd into the project's root dir and build:
+
+```sh
+
+> make java
 
 ```
 
@@ -79,7 +91,7 @@ Here is a screenshot of the sample app in action:
 ![demo](./resources/demo.jpeg)
 
 
-#### Run sample app (C)
+#### Run Sample App (C)
 
 The sample app demonstrates two clients using Disv5 to find each other and the use of GossipSub to send messages back and forth.
 
@@ -109,7 +121,7 @@ In a second terminal run:
 
 ```
 
-#### Run sample app (Java)
+#### Run Sample App (Java)
 
 The sample app demonstrates two clients using Disv5 to find each other and the use of GossipSub to send messages back and forth.
 

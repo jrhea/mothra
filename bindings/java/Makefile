@@ -8,7 +8,7 @@ INCLUDES = -I$(JBIND_DIR)/
 CFLAGS = -O2 -fPIC
 LFLAGS = -shared
 
-.PHONY : java-bindings clean
+.PHONY : java-bindings-ingress java-bindings-egress clean
 
 java-bindings-ingress:
 	mkdir -p $(CORE_DIR)/target/release

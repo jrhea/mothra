@@ -5,7 +5,7 @@ include ../../config.mk
 CLASS_PATH = ./
 vpath %.class $(CLASS_PATH)
 
-examples: moveFiles mothra.class example.class
+java-examples: moveFiles mothra.class example.class
 	rm -f mothra.java
 
 %.class:
