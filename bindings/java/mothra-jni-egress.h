@@ -16,4 +16,4 @@ extern void libp2p_send_gossip(char*);
 }
 #endif
 
-#endif // _MOTHRA_JNI_H_
+#endif // _MOTHRA_JNI_EGRESS_H_

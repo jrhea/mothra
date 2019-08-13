@@ -1,41 +1,52 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <assert.h>
 #include "mothra-jni-ingress.h"
 
-JNIEXPORT JNIEnv* JNICALL create_vm(JavaVM **jvm)
+static JavaVM *jvm;
+
+JNIEXPORT void JNICALL Java_mothra_Init(JNIEnv* jenv, jclass jcls)
 {
-    printf("create_vm0\n");
-    JNIEnv* env;
-    JavaVMInitArgs args;
-    JavaVMOption options;
-    printf("create_vm1\n");
-    args.version = JNI_VERSION_10;
-    args.nOptions = 1;
-    options.optionString = "-Djava.class.path=/Library/Java/JavaVirtualMachines/openjdk-11.0.1.jdk/Contents/Home/lib/server/";
-    args.options = &options;
-    args.ignoreUnrecognized = 0;
-    int rv;
-    printf("create_vm4\n");
-    rv = JNI_CreateJavaVM(jvm, (void**)&env, &args);
-    printf("create_vm5\n");
-    if (rv < 0 || !env)
-        printf("Unable to Launch JVM %d\n",rv);
-    else
-        printf("Launched JVM! :)\n");
-    return env;
+   printf("Java_mothra_Init: start\n");
+   jint rs = (*jenv)->GetJavaVM(jenv, &jvm);
+   printf("Java_mothra_Init: rs = %i\n",rs);
+   assert (rs == JNI_OK);
+   printf("Java_mothra_Init: end\n");
 }
 
 void receive_gossip(char* message) {
-    JavaVM *jvm;
-    JNIEnv *env;
-    env = create_vm(&jvm);
-    if(env != NULL) {
+
+    JNIEnv *jenv;
+    printf("receive_gossip: before attach\n");
+    jint rs = (*jvm)->AttachCurrentThread(jvm, (void**)&jenv, NULL);
+    printf("receive_gossip: rs = %i\n",rs);
+    printf("receive_gossip: after attach\n");
+    assert (rs == JNI_OK);
+    printf("jenv: %p\n",jenv);
+    if(jenv != NULL) {
         jclass mothra_class;
         jmethodID receivegossip_method;
-        mothra_class = (*env)->FindClass(env, "mothra");
-        jstring jmessage = (*env)->NewStringUTF(env, message);
-        receivegossip_method = (*env)->GetStaticMethodID(env, mothra_class, "ReceiveGossip", "([Ljava/lang/String;)V");
-        (*env)->CallStaticVoidMethod(env, mothra_class, receivegossip_method, jmessage);
+        jstring jmessage;
+        mothra_class = (*jenv)->FindClass(jenv, "mothra");
+        if(!mothra_class){
+            detach(jenv);
+        }
+        jmessage = (*jenv)->NewStringUTF(jenv, message);
+        if(!jmessage){
+            detach(jenv);
+        }
+        receivegossip_method = (*jenv)->GetStaticMethodID(jenv, mothra_class, "ReceiveGossip", "(Ljava/lang/String;)V");
+        if(!receivegossip_method){
+            detach(jenv);
+        }
+        (*jenv)->CallStaticVoidMethod(jenv, mothra_class, receivegossip_method, jmessage);
     }
+}
+
+void detach(JNIEnv* jenv){
+    if((*jenv)->ExceptionOccurred(jenv)) {
+        (*jenv)->ExceptionDescribe(jenv);
+    }
+    (*jvm)->DetachCurrentThread(jvm);
 }

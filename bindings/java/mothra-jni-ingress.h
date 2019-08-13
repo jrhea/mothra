@@ -6,12 +6,14 @@
 extern "C" {
 #endif
 
-JNIEXPORT JNIEnv* JNICALL create_vm(JavaVM **);
+JNIEXPORT void JNICALL Java_mothra_Init(JNIEnv*,jclass);
 
 void receive_gossip(char*);
+
+void detach(JNIEnv* );
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // _MOTHRA_JNI_H_
+#endif // _MOTHRA_JNI_INGRESS_H_
