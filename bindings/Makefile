@@ -2,7 +2,10 @@ SHELL := /bin/sh
 
 include ../config.mk
 
-java-bindings:
+java-bindings-ingress:
+	cd $(JBIND_DIR) && make $@
+
+java-bindings-egress:
 	cd $(JBIND_DIR) && make $@
 
 c-bindings:

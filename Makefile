@@ -2,33 +2,48 @@ SHELL := /bin/sh
 
 include config.mk
 
-.PHONY:=all examples bindings c-bindings java-bindings rust clean
+.PHONY:=c java c-bindings java-bindings c-examples java-examples clean
 
-all: examples bindings
+c-mash: clean c
 
-mash: clean all
+java-mash: clean java
 
-examples: bindings
+c: c-examples
+
+java: java-examples
+
+c-examples: c-bindings
 	@echo ""
 	@echo Building examples
 	cd $(EXAMPLES_DIR) && make $@
 
-bindings: c-bindings java-bindings
-
-c-bindings: rust
+java-examples: java-bindings
 	@echo ""
-	@echo Building C bindings
-	cd $(BIND_DIR) && make $@
+	@echo Building examples
+	cd $(EXAMPLES_DIR) && make $@
 
-java-bindings: rust
+c-bindings:
+	 @echo ""
+	 @echo Building C bindings
+	 cd $(BIND_DIR) && make $@
+	 @echo ""
+	 @echo Building Rust bindings
+	 cd $(CORE_DIR) && make $@
+
+java-bindings: java-bindings-ingress java-bindings-egress
+
+java-bindings-ingress:
 	@echo ""
 	@echo Building Java bindings
 	cd $(BIND_DIR) && make $@
-
-rust:
 	@echo ""
 	@echo Building Rust bindings
 	cd $(CORE_DIR) && make $@
+
+java-bindings-egress:
+	@echo ""
+	@echo Building Java bindings
+	cd $(BIND_DIR) && make $@
 
 clean:
 	cd $(CORE_DIR) && make $@

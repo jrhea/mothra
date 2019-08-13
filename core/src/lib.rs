@@ -2,7 +2,7 @@ pub mod mothra_api;
 extern crate getopts;
 use std::sync::mpsc::{channel,Sender,Receiver};
 use std::{thread, time};
-use std::ffi::CStr;
+use std::ffi::{CStr,CString};
 use std::os::raw::{c_char,c_int};
 use std::io::Cursor;
 use std::convert::TryFrom;
@@ -16,7 +16,7 @@ use mothra_api::api;
 thread_local!(static SEND: RefCell<Option<Sender<Message>>> = RefCell::new(None));
 
 extern {
-    fn libp2p_receive_gossip(message_c_char: *mut c_char);
+    fn receive_gossip(message_c_char: *mut c_char);
 }
 
 #[no_mangle]
@@ -58,9 +58,11 @@ pub extern fn libp2p_start(args_c_char: *mut *mut c_char, length: c_int) {
         loop{
             let network_message = rx2.recv().unwrap();
             if network_message.command == "GOSSIP".to_string() {
-                let message = String::from_utf8(network_message.value).unwrap();
+                let mut message = String::from_utf8(network_message.value).unwrap();
+                let mut message_c_str = CString::new(message).unwrap();  //adds null terminator
+                let mut message_ptr = message_c_str.as_ptr();
                 unsafe {
-                    libp2p_receive_gossip(message.as_ptr() as *mut i8);
+                    receive_gossip(message_ptr as *mut i8);
                 }
             }
         }     

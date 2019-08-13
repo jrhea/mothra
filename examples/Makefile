@@ -2,8 +2,10 @@ SHELL := /bin/sh
 
 include ../config.mk
 
-examples: 
+c-examples: 
 	cd c && make $@
+
+java-examples:
 	cd java && make $@
 
 clean:

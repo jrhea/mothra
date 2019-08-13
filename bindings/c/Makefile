@@ -2,10 +2,17 @@ SHELL := /bin/sh
 
 include ../../config.mk
 
-.PHONY : examples clean
+CFLAGS:=-O2 -fPIC
+LFLAGS = -shared
+INCLUDES = -I$(CBIND_DIR)/
+TARGET:=$(CORE_DIR)/target/release/libmothra-ingress.$(EXT)
 
-c-bindings:
-	@echo C bindings are header only files
+.PHONY: c-bindings clean	
+
+c-bindings: 
+	mkdir -p $(CORE_DIR)/target/release
+	rm -f $(TARGET)
+	$(CC) $(INCLUDES) $(CBIND_DIR)/mothra.c $(CFLAGS) $(LFLAGS) -o $(TARGET)
 
 clean:
-	rm -rf $(OUT_DIR)/libmothra.$(EXT)
+	rm -rf $(OUT_DIR)/libmothra.a

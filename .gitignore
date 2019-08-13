@@ -6,3 +6,4 @@
 **/.DS_Store
 *.code-workspace
 *.vscode
+jni.h
