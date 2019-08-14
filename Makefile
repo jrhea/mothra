@@ -46,7 +46,7 @@ java-bindings-egress:
 	cd $(BIND_DIR) && make $@
 
 clean-bin:
-	rm -f $(OUT_DIR)/*
+	rm -rf $(OUT_DIR)/*
 clean:
 	cd $(CORE_DIR) && make $@
 	cd $(BIND_DIR) && make $@

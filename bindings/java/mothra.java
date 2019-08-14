@@ -1,6 +1,7 @@
+package net.p2p;
 
 public class mothra {
-    public static final String NAME = "mothra-egress"; 
+    public static final String NAME = System.getProperty("user.dir") + "/libmothra-egress.dylib"; 
     public static native void Init();
     public static native void Start(String[] args);
     public static native void SendGossip(byte[] message);
@@ -9,8 +10,7 @@ public class mothra {
     }
     static {
         try {
-            System.loadLibrary ( NAME ) ;
-            
+            System.load ( NAME ) ;
         } catch (UnsatisfiedLinkError e) {
           System.err.println("Native code library failed to load.\n" + e);
           System.exit(1);

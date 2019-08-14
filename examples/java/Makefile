@@ -2,21 +2,10 @@ SHELL := /bin/sh
 
 include ../../config.mk
 
-CLASS_PATH = ./
-vpath %.class $(CLASS_PATH)
-
-java-examples: moveFiles mothra.class example.class
-	rm -f mothra.java
+java-examples: example.class
 
 %.class:
-	javac $*.java -d $(OUT_DIR)/
-	#cd $(OUT_DIR) \
-	#&& printf "Main-Class: app\n" > manifest.txt \
-	#&& jar -cvmf manifest.txt app.jar *.class \
-	#&& /Library/Java/JavaVirtualMachines/jdk1.8.0_192.jdk/Contents/Home/bin/javapackager create-image --runtime-image image --input . --output . --name mothra --main-jar app.jar
-
-moveFiles: 
-	cp $(JBIND_DIR)/mothra.java .
+	javac -cp $(OUT_DIR)/mothra.jar $*.java -d $(OUT_DIR)/
 
 clean:
 	rm -rf $(OUT_DIR)/*.class

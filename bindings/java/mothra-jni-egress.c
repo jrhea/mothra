@@ -5,7 +5,7 @@
 #include "mothra-jni-egress.h"
 #include "mothra-jni-ingress.h"
 
-JNIEXPORT void JNICALL Java_mothra_Start (JNIEnv *jenv, jclass jcls, jobjectArray jargs){
+JNIEXPORT void JNICALL Java_net_p2p_mothra_Start (JNIEnv *jenv, jclass jcls, jobjectArray jargs){
     int length = (*jenv)->GetArrayLength(jenv, jargs);
     char **args = (char **) malloc(length * sizeof(char *));
     if(args){
@@ -27,7 +27,7 @@ JNIEXPORT void JNICALL Java_mothra_Start (JNIEnv *jenv, jclass jcls, jobjectArra
     free(args);
 }
 
-JNIEXPORT void JNICALL Java_mothra_SendGossip (JNIEnv *jenv, jclass jcls, jbyteArray jmessage){
+JNIEXPORT void JNICALL Java_net_p2p_mothra_SendGossip (JNIEnv *jenv, jclass jcls, jbyteArray jmessage){
     int length = (*jenv)->GetArrayLength(jenv, jmessage);
     jbyte *message = (jbyte *) 0 ;
     if (jmessage) {

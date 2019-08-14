@@ -6,7 +6,7 @@
 
 static JavaVM *jvm;
 
-JNIEXPORT void JNICALL Java_mothra_Init(JNIEnv* jenv, jclass jcls)
+JNIEXPORT void JNICALL Java_net_p2p_mothra_Init(JNIEnv* jenv, jclass jcls)
 {
    jint rs = (*jenv)->GetJavaVM(jenv, &jvm);
    assert (rs == JNI_OK);
@@ -20,7 +20,7 @@ void receive_gossip(unsigned char* message, int length) {
         jclass mothra_class;
         jmethodID receivegossip_method;
         jbyteArray jmessage;
-        mothra_class = (*jenv)->FindClass(jenv, "mothra");
+        mothra_class = (*jenv)->FindClass(jenv, "net/p2p/mothra");
         if(!mothra_class){
             detach(jenv);
         }

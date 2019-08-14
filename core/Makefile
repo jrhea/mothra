@@ -8,14 +8,14 @@ JAVA_LIBS = -L$(JAVA_HOME)/lib/server/ -ljvm
 c-bindings:
 	cargo build --release
 	$(shell mkdir -p $(OUT_DIR))
-	mv $(CORE_DIR)/target/release/libmothra.$(EXT) $(CORE_DIR)/target/release/libmothra-c.$(EXT)
+	mv $(CORE_DIR)/target/release/libmothra.$(EXT) $(CORE_DIR)/target/release/libmothra.$(EXT)
 	cp $(CORE_DIR)/target/release/*.* $(OUT_DIR)/
 
 java-bindings-ingress:
 	#RUSTFLAGS="-C link-args=-Wl,-rpath,/Library/Java/JavaVirtualMachines/openjdk-11.0.1.jdk/Contents/Home/lib/server" cargo build --release
 	cargo build --release
 	$(shell mkdir -p $(OUT_DIR))
-	mv $(CORE_DIR)/target/release/libmothra.$(EXT) $(CORE_DIR)/target/release/libmothra-java.$(EXT)
+	mv $(CORE_DIR)/target/release/libmothra.$(EXT) $(CORE_DIR)/target/release/libmothra.$(EXT)
 	cp $(CORE_DIR)/target/release/*.* $(OUT_DIR)/
 clean:
 	cargo clean
