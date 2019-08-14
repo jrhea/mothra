@@ -11,12 +11,10 @@ LFLAGS = -shared
 .PHONY : java-bindings-ingress java-bindings-egress clean
 
 java-bindings-ingress: 
-	mkdir -p $(CORE_DIR)/target/release
-	rm -f $(CORE_DIR)/target/release/*.*
-	$(CC) $(JBIND_DIR)/mothra-jni-ingress.c $(INCLUDES) $(JAVA_INCLUDES) $(JAVA_LIBS) $(CFLAGS) $(LFLAGS) -o $(CORE_DIR)/target/release/libmothra-ingress.$(EXT)
+	mkdir -p $(OUT_DIR)
+	$(CC) $(JBIND_DIR)/mothra-jni-ingress.c $(INCLUDES) $(JAVA_INCLUDES) $(JAVA_LIBS) $(CFLAGS) $(LFLAGS) -o $(OUT_DIR)/libmothra-ingress.$(EXT)
 
 java-bindings-egress: mothra.class
-	$(shell mkdir -p $(OUT_DIR))
 	$(CC) $(JBIND_DIR)/mothra-jni-egress.c $(INCLUDES) -L$(OUT_DIR) -lmothra $(JAVA_INCLUDES) $(JAVA_LIBS) $(CFLAGS) $(LFLAGS) -o $(OUT_DIR)/libmothra-egress.$(EXT)
 
 %.class:
@@ -26,4 +24,4 @@ java-bindings-egress: mothra.class
 	&& jar cfm mothra.jar manifest.txt net/p2p/*.class
 
 clean:
-	rm -rf $(OUT_DIR)/mothra*
+	rm -rf $(OUT_DIR)/libmothra-egress.$(EXT)

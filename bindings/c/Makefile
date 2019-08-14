@@ -5,14 +5,14 @@ include ../../config.mk
 CFLAGS:=-O2 -fPIC
 LFLAGS = -shared
 INCLUDES = -I$(CBIND_DIR)/
-TARGET:=$(CORE_DIR)/target/release/libmothra-ingress.$(EXT)
+TARGET:=$(OUT_DIR)/libmothra-ingress.$(EXT)
 
 .PHONY: c-bindings clean	
 
 c-bindings: 
-	mkdir -p $(CORE_DIR)/target/release
+	mkdir -p $(OUT_DIR)
 	rm -f $(TARGET)
 	$(CC) $(INCLUDES) $(CBIND_DIR)/mothra.c $(CFLAGS) $(LFLAGS) -o $(TARGET)
 
 clean:
-	rm -rf $(OUT_DIR)/libmothra.a
+	rm -rf $(TARGET)
