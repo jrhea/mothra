@@ -1,11 +1,11 @@
 # Mothra: LibP2P for Dummies
 
+> Credits: This project shamelessly borrows from: https://github.com/sigp/lighthouse
+
 Mothra was created to house native language bindings between [Rust-LibP2P](https://github.com/libp2p/rust-libp2p) and any number of other languages.  The current languages that are supported are:
 
 - C
 - Java
-
-> Credits: This project shamelessly borrows from: https://github.com/sigp/lighthouse
 
 ### The Thing That Should Not Be
 
