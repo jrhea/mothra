@@ -9,12 +9,44 @@ use std::convert::TryFrom;
 use std::mem;
 use std::ops::Range;
 use std::cell::RefCell;
+use std::cell::RefMut;
 use cast::i16;
 use slog::{info, debug, warn, o, Drain};
 use libp2p_wrapper::Message;
 use mothra_api::api;
 
-thread_local!(static SEND: RefCell<Option<Sender<Message>>> = RefCell::new(None));
+#[derive(Debug)]
+struct Global {
+    tx: RefCell<Option<Sender<Message>>>
+}
+
+static mut GLOBAL: Global = Global{ tx:  RefCell::new(None) };
+
+impl Global {
+    fn set(&mut self, value: &RefCell<Option<Sender<Message>>>) {
+        self.tx.swap(value);
+    }
+
+    fn get(&self) -> RefMut<Option<Sender<Message>>> {
+        self.tx.borrow_mut()
+    }
+}
+
+macro_rules! set_tx {
+    ($fmt:expr) => (
+        unsafe {
+            GLOBAL.set($fmt)
+        }
+    );
+}
+
+macro_rules! get_tx {
+    () => (
+        unsafe {
+            GLOBAL.get()
+        }
+    );
+}
 
 extern {
     fn receive_gossip(message_c_char: *mut c_uchar, length: i16);
@@ -47,29 +79,18 @@ pub extern fn libp2p_start(args_c_char: *mut *mut c_char, length: isize) {
     thread::spawn(move || {
         api::start(args, &tx2, &rx1, nlog.new(o!("API" => "start()")));
     });
-    
-    SEND.with(|tx_cell| {
-        tx_cell.swap(&RefCell::new(Some(tx1)));
-    });
+
+    set_tx!(&RefCell::new(Some(tx1)));
 
     ///Listen for messages rcvd from the network
     thread::spawn(move || {
         loop{
             match rx2.recv(){
-                Ok(network_message) => {
-                    if network_message.command == "GOSSIP".to_string() {
-                        
+                Ok(mut network_message) => {
+                    if network_message.command == "GOSSIP".to_string() {                
                         let length = i16(network_message.value.len()).unwrap();
-                        match CString::new(network_message.value){ //adds null terminator
-                            Ok(message_c_str) => {
-                                let mut message_ptr = message_c_str.as_ptr();
-                                unsafe {
-                                    receive_gossip(message_ptr as *mut u8, length);
-                                }
-                            }
-                            Err(_) => {
-                                std::println!("Rcv Thread Error: CString::new(message) ");
-                            }
+                        unsafe {
+                            receive_gossip(network_message.value.as_mut_ptr(), length);
                         }
                     }
                 }
@@ -85,11 +106,10 @@ pub extern fn libp2p_start(args_c_char: *mut *mut c_char, length: isize) {
 #[no_mangle]
 pub extern fn libp2p_send_gossip(message_c_uchar: *mut c_uchar, length: usize) {
     let mut message_bytes = unsafe { std::slice::from_raw_parts_mut(message_c_uchar, length) };
-    SEND.with(|tx_cell| {
-        let message = Message {
-            command: "GOSSIP".to_string(), 
-            value: message_bytes.to_vec()
-        };
-        tx_cell.borrow_mut().as_mut().unwrap().send(message);
-    });
+
+    let message = Message {
+        command: "GOSSIP".to_string(), 
+        value: message_bytes.to_vec()
+    };
+    get_tx!().as_mut().unwrap().send(message);
 }

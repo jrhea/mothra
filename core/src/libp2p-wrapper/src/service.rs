@@ -166,8 +166,6 @@ impl Stream for Service {
 /// The implementation supports TCP/IP, WebSockets over TCP/IP, secio as the encryption layer, and
 /// mplex or yamux as the multiplexing layer.
 fn build_transport(local_private_key: Keypair) -> Boxed<(PeerId, StreamMuxerBox), Error> {
-    // TODO: The Wire protocol currently doesn't specify encryption and this will need to be customised
-    // in the future.
     let transport = libp2p::tcp::TcpConfig::new();
     let transport = libp2p::dns::DnsConfig::new(transport);
     #[cfg(feature = "libp2p-websocket")]

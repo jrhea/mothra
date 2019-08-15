@@ -1,12 +1,15 @@
 package net.p2p;
 
+import java.util.function.Function;
+
 public class mothra {
     public static final String NAME = System.getProperty("user.dir") + "/libmothra-egress.dylib"; 
+    public static Function<byte[], Boolean> ReceivedMessage;
     public static native void Init();
     public static native void Start(String[] args);
     public static native void SendGossip(byte[] message);
     public static void ReceiveGossip(byte[] message){
-        System.out.println("Java: received this message from another peer - " + new String(message));
+        ReceivedMessage.apply(message);
     }
     static {
         try {

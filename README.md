@@ -1,8 +1,8 @@
 # Mothra: LibP2P for Dummies
 
-> Credits: This project shamelessly borrows from: https://github.com/sigp/lighthouse
+**⚠️ This is a work in progress! ⚠️**
 
-Mothra was created to house native language bindings between [Rust-LibP2P](https://github.com/libp2p/rust-libp2p) and any number of other languages.  The current languages that are supported are:
+Mothra was created to house native language bindings between [Rust-LibP2P](https://github.com/libp2p/rust-libp2p) and any number of other languages.  The current languages that are supported (so far) are:
 
 - C
 - Java
@@ -21,7 +21,7 @@ Mothra is wire protocol agnostic and intended to provide a simple API that requi
 - PubSub
   - event subscription
   - send/receive
-- RPC
+- RPC (not yet implemented)
   - send/receive
 
 
@@ -133,3 +133,9 @@ If you have `tmux` installed, it is a little simpler to run:
 > cd examples/java && sh peerDemo.sh
 
 ```
+
+### Credits/Acknowledgements
+
+- A big thanks to the [Lighthouse](https://github.com/sigp/lighthouse) crew.  Not only does Mothra shamelessly borrow from their project, but I literally learned Rust by looking at their code.
+
+- Since Mothra is essentially a wrapper around [Rust-LibP2P](https://github.com/libp2p/rust-libp2p), they deserve a fist bump too.
