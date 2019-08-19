@@ -1,12 +1,13 @@
 use clap::ArgMatches;
 use enr::Enr;
 use libp2p::gossipsub::{GossipsubConfig, GossipsubConfigBuilder};
+use libp2p::Multiaddr;
 use serde_derive::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::time::Duration;
 
 /// The beacon node topic string to subscribe to.
-pub const BEACON_PUBSUB_TOPIC: &str = "beacon_block";
+pub const BEACON_BLOCK_TOPIC: &str = "beacon_block";
 pub const BEACON_ATTESTATION_TOPIC: &str = "beacon_attestation";
 pub const SHARD_TOPIC_PREFIX: &str = "shard";
 
@@ -39,6 +40,9 @@ pub struct Config {
     /// List of nodes to initially connect to.
     pub boot_nodes: Vec<Enr>,
 
+    /// List of libp2p nodes to initially connect to.
+    pub libp2p_nodes: Vec<Multiaddr>,
+
     /// Client version
     pub client_version: String,
 
@@ -50,7 +54,7 @@ impl Default for Config {
     /// Generate a default network configuration.
     fn default() -> Self {
         let mut network_dir = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
-        network_dir.push(".artemis");
+        network_dir.push(".mothra");
         network_dir.push("network");
         Config {
             network_dir,
@@ -61,12 +65,12 @@ impl Default for Config {
             max_peers: 10,
             //TODO: Set realistic values for production
             gs_config: GossipsubConfigBuilder::new()
-                .max_gossip_size(4_000_000)
-                .inactivity_timeout(Duration::from_secs(90))
+                .max_transmit_size(1_000_000)
                 .heartbeat_interval(Duration::from_secs(20))
                 .build(),
             boot_nodes: vec![],
-            client_version: "1".to_string(),
+            libp2p_nodes: vec![],
+            client_version: "0.0.1".to_string(),
             topics: Vec::new(),
         }
     }

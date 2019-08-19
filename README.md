@@ -118,7 +118,7 @@ In a second terminal run:
 
 ```sh
 
-> ./example --boot-nodes -IW4QKaKpM5ljLpEEuFjcmoqFVYpY2PVGigNX3vFWzJzfjESWmltcztnrgKP8hLHKShBZTd2lIfjpwCiZCtK8GjPQq4DgmlwhH8AAAGDdGNwgiMog3VkcIIjKIlzZWNwMjU2azGhA7mA0yD2yMhLDZ2cHtQCe-2xhLrBmcCM2Eg9jYWDFqk5 --listen-address 127.0.0.1 --port 9001 --datadir /tmp/.artemis
+> ./example --boot-nodes -IW4QA-kin8iSkXbYod9kVfizxFDK9_b8wl7-dBCB1wPTowWUSDIuz05ywYbluGqGvcIyfSJaE0vRtxuJyDxMoSkIpUBgmlwhH8AAAGDdGNwgiMog3VkcIIjKIlzZWNwMjU2azGhAgu2W7T48VatZVXuvpCSFLtzKGgCYpHUcNO-zT7wELLP --listen-address 127.0.0.1 --port 9001 --datadir /tmp/.artemis
 
 ```
 
@@ -138,4 +138,4 @@ If you have `tmux` installed, it is a little simpler to run:
 
 - A big thanks to the [Lighthouse](https://github.com/sigp/lighthouse) crew.  Not only does Mothra shamelessly borrow from their project, but I literally learned Rust by looking at their code.
 
-- Since Mothra is essentially a wrapper around [Rust-LibP2P](https://github.com/libp2p/rust-libp2p), they deserve a fist bump too.
+- Since Mothra is essentially a wrapper around [Rust-LibP2P](https://github.com/libp2p/rust-libp2p), they deserve a fist bump too.≠≠≠

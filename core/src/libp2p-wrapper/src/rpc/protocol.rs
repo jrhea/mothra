@@ -1,4 +1,3 @@
-use super::methods::*;
 use crate::rpc::codec::{
     base::{BaseInboundCodec, BaseOutboundCodec},
     serenity::{SerenityInboundCodec, SerenityOutboundCodec},
@@ -8,7 +7,7 @@ use futures::{
     future::{self, FutureResult},
     sink, stream, Sink, Stream,
 };
-use libp2p::core::{upgrade, InboundUpgrade, OutboundUpgrade, UpgradeInfo};
+use libp2p::core::{upgrade, InboundUpgrade, OutboundUpgrade, ProtocolName, UpgradeInfo};
 use std::io;
 use std::time::Duration;
 use tokio::codec::Framed;
@@ -28,12 +27,12 @@ const REQUEST_TIMEOUT: u64 = 3;
 pub struct RPCProtocol;
 
 impl UpgradeInfo for RPCProtocol {
-    type Info = RawProtocolId;
+    type Info = ProtocolId;
     type InfoIter = Vec<Self::Info>;
 
     fn protocol_info(&self) -> Self::InfoIter {
         vec![
-            ProtocolId::new("hello", "1.0.0", "ssz").into(),
+            ProtocolId::new("message", "1.0.0", "ssz"),
         ]
     }
 }
@@ -42,6 +41,7 @@ impl UpgradeInfo for RPCProtocol {
 type RawProtocolId = Vec<u8>;
 
 /// Tracks the types in a protocol id.
+#[derive(Clone)]
 pub struct ProtocolId {
     /// The rpc message type/name.
     pub message_name: String,
@@ -51,44 +51,31 @@ pub struct ProtocolId {
 
     /// The encoding of the RPC.
     pub encoding: String,
+
+    /// The protocol id that is formed from the above fields.
+    protocol_id: String,
 }
 
 /// An RPC protocol ID.
 impl ProtocolId {
     pub fn new(message_name: &str, version: &str, encoding: &str) -> Self {
+        let protocol_id = format!(
+            "{}/{}/{}/{}",
+            PROTOCOL_PREFIX, message_name, version, encoding
+        );
+
         ProtocolId {
             message_name: message_name.into(),
             version: version.into(),
             encoding: encoding.into(),
+            protocol_id,
         }
-    }
-
-    /// Converts a raw RPC protocol id string into an `RPCProtocolId`
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self, RPCError> {
-        let protocol_string = String::from_utf8(bytes.to_vec())
-            .map_err(|_| RPCError::InvalidProtocol("Invalid protocol Id"))?;
-        let protocol_list: Vec<&str> = protocol_string.as_str().split('/').take(7).collect();
-
-        if protocol_list.len() != 7 {
-            return Err(RPCError::InvalidProtocol("Not enough '/'"));
-        }
-
-        Ok(ProtocolId {
-            message_name: protocol_list[4].into(),
-            version: protocol_list[5].into(),
-            encoding: protocol_list[6].into(),
-        })
     }
 }
 
-impl Into<RawProtocolId> for ProtocolId {
-    fn into(self) -> RawProtocolId {
-        format!(
-            "{}/{}/{}/{}",
-            PROTOCOL_PREFIX, self.message_name, self.version, self.encoding
-        )
-        .as_bytes()
-        .to_vec()
+impl ProtocolName for ProtocolId {
+    fn protocol_name(&self) -> &[u8] {
+        self.protocol_id.as_bytes()
     }
 }
 
@@ -123,16 +110,11 @@ where
     fn upgrade_inbound(
         self,
         socket: upgrade::Negotiated<TSocket>,
-        protocol: RawProtocolId,
+        protocol: ProtocolId,
     ) -> Self::Future {
-        // TODO: Verify this
-        let protocol_id =
-            ProtocolId::from_bytes(&protocol).expect("Can decode all supported protocols");
-
-        match protocol_id.encoding.as_str() {
+        match protocol.encoding.as_str() {
             "ssz" | _ => {
-                let serenity_codec =
-                    BaseInboundCodec::new(SerenityInboundCodec::new(protocol_id, MAX_RPC_SIZE));
+                let serenity_codec = BaseInboundCodec::new(SerenityInboundCodec::new(protocol, MAX_RPC_SIZE));
                 let codec = InboundCodec::Serenity(serenity_codec);
                 Framed::new(socket, codec)
                     .into_future()
@@ -158,11 +140,11 @@ where
 
 #[derive(Debug, Clone)]
 pub enum RPCRequest {
-    Hello(HelloMessage),
+    Message(Vec<u8>),
 }
 
 impl UpgradeInfo for RPCRequest {
-    type Info = RawProtocolId;
+    type Info = ProtocolId;
     type InfoIter = Vec<Self::Info>;
 
     // add further protocols as we support more encodings/versions
@@ -173,10 +155,12 @@ impl UpgradeInfo for RPCRequest {
 
 /// Implements the encoding per supported protocol for RPCRequest.
 impl RPCRequest {
-    pub fn supported_protocols(&self) -> Vec<RawProtocolId> {
+    pub fn supported_protocols(&self) -> Vec<ProtocolId> {
         match self {
             // add more protocols when versions/encodings are supported
-            RPCRequest::Hello(_) => vec![ProtocolId::new("hello", "1.0.0", "ssz").into()],
+            RPCRequest::Message(_) => vec![
+                ProtocolId::new("message", "1.0.0", "ssz"),
+            ],
         }
     }
 }
@@ -199,12 +183,9 @@ where
         socket: upgrade::Negotiated<TSocket>,
         protocol: Self::Info,
     ) -> Self::Future {
-        let protocol_id =
-            ProtocolId::from_bytes(&protocol).expect("Can decode all supported protocols");
-
-        match protocol_id.encoding.as_str() {
+        match protocol.encoding.as_str() {
             "ssz" | _ => {
-                let serenity_codec = BaseOutboundCodec::new(SerenityOutboundCodec::new(protocol_id, 4096));
+                let serenity_codec = BaseOutboundCodec::new(SerenityOutboundCodec::new(protocol, 4096));
                 let codec = OutboundCodec::Serenity(serenity_codec);
                 Framed::new(socket, codec).send(self)
             }

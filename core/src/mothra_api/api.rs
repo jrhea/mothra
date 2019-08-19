@@ -12,7 +12,7 @@ use tokio::timer::Interval;
 use tokio_timer::clock::Clock;
 use futures::Future;
 use clap::{App, Arg, AppSettings};
-use libp2p_wrapper::{NetworkConfig, TopicBuilder, BEACON_PUBSUB_TOPIC,Message};
+use libp2p_wrapper::{NetworkConfig, Topic, BEACON_ATTESTATION_TOPIC, BEACON_BLOCK_TOPIC,Message};
 use tokio::sync::mpsc;
 use super::network::{Network,NetworkMessage};
 
@@ -103,7 +103,7 @@ fn monitor(
 }
 
 fn gossip( mut network_send: mpsc::UnboundedSender<NetworkMessage>, message: Vec<u8>, log: slog::Logger){
-    let topic = TopicBuilder::new(BEACON_PUBSUB_TOPIC).build();
+    let topic = Topic::new(BEACON_BLOCK_TOPIC.to_string());
     network_send.try_send(NetworkMessage::Publish {
         topics: vec![topic],
         message: message,
@@ -117,10 +117,10 @@ fn gossip( mut network_send: mpsc::UnboundedSender<NetworkMessage>, message: Vec
 
 pub fn config(args: Vec<String>) -> ArgMatches<'static> {
     
-    App::new("Artemis")
+    App::new("Mothra")
     .version("0.0.1")
     .author("Your Mom")
-    .about("Eth 2.0 Client")
+    .about("LibP2P for Dummies")
     .setting(AppSettings::TrailingVarArg)
     .setting(AppSettings::DontDelimitTrailingValues)
     .arg(

@@ -4,13 +4,12 @@ use crate::{error, NetworkConfig};
 use crate::{Topic, TopicHash};
 use futures::prelude::*;
 use libp2p::{
-    core::{
-        identity::Keypair,
-        swarm::{NetworkBehaviourAction, NetworkBehaviourEventProcess},
-    },
+    core::identity::Keypair,
     discv5::Discv5Event,
     gossipsub::{Gossipsub, GossipsubEvent},
+    identify::{Identify, IdentifyEvent},
     ping::{Ping, PingConfig, PingEvent},
+    swarm::{NetworkBehaviourAction, NetworkBehaviourEventProcess},
     tokio_io::{AsyncRead, AsyncWrite},
     NetworkBehaviour, PeerId,
 };
@@ -18,6 +17,8 @@ use slog::{o, debug};
 use std::num::NonZeroU32;
 use std::time::Duration;
 use std::collections::HashSet;
+
+const MAX_IDENTIFY_ADDRESSES: usize = 20;
 
 /// Builds the network behaviour that manages the core protocols of eth2.
 /// This core behaviour is managed by `Behaviour` which adds peer management to all core
@@ -31,6 +32,9 @@ pub struct Behaviour<TSubstream: AsyncRead + AsyncWrite> {
     serenity_rpc: RPC<TSubstream>,
     /// Keep regular connection to peers and disconnect if absent.
     ping: Ping<TSubstream>,
+    // TODO: Using id for initial interop. This will be removed by mainnet.
+    /// Provides IP addresses and peer information.
+    identify: Identify<TSubstream>,
     /// Kademlia for peer discovery.
     discovery: Discovery<TSubstream>,
     #[behaviour(ignore)]
@@ -55,11 +59,19 @@ impl<TSubstream: AsyncRead + AsyncWrite> Behaviour<TSubstream> {
             .with_max_failures(NonZeroU32::new(2).expect("2 != 0"))
             .with_keep_alive(false);
 
+        let identify = Identify::new(
+            "mothra/libp2p".into(),
+            "0.0.1".to_string(),
+            local_key.public(),
+        );
+
+
         Ok(Behaviour {
             serenity_rpc: RPC::new(log),
             gossipsub: Gossipsub::new(local_peer_id.clone(), net_conf.gs_config.clone()),
             discovery: Discovery::new(local_key, net_conf, log)?,
             ping: Ping::new(ping_config),
+            identify,
             events: Vec::new(),
             log: behaviour_log,
         })
@@ -75,12 +87,12 @@ impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<GossipsubE
             GossipsubEvent::Message(gs_msg) => {
                 //debug!(self.log, "Received GossipEvent"; "msg" => format!("{:?}", gs_msg));
 
-                let pubsub_message = PubsubMessage::Other(gs_msg.data);
+                let msg = PubsubMessage::from_topics(&gs_msg.topics, gs_msg.data);
 
                 self.events.push(BehaviourEvent::GossipMessage {
                     source: gs_msg.source,
                     topics: gs_msg.topics,
-                    message: Box::new(pubsub_message),
+                    message: msg,
                 });
             }
             GossipsubEvent::Subscribed { .. } => {}
@@ -125,6 +137,34 @@ impl<TSubstream: AsyncRead + AsyncWrite> Behaviour<TSubstream> {
         }
 
         Async::NotReady
+    }
+}
+
+impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<IdentifyEvent>
+    for Behaviour<TSubstream>
+{
+    fn inject_event(&mut self, event: IdentifyEvent) {
+        match event {
+            IdentifyEvent::Identified {
+                peer_id, mut info, ..
+            } => {
+                if info.listen_addrs.len() > MAX_IDENTIFY_ADDRESSES {
+                    debug!(
+                        self.log,
+                        "More than 20 addresses have been identified, truncating"
+                    );
+                    info.listen_addrs.truncate(MAX_IDENTIFY_ADDRESSES);
+                }
+                debug!(self.log, "Identified Peer"; "Peer" => format!("{}", peer_id),
+                "Protocol Version" => info.protocol_version,
+                "Agent Version" => info.agent_version,
+                "Listening Addresses" => format!("{:?}", info.listen_addrs),
+                "Protocols" => format!("{:?}", info.protocols)
+                );
+            }
+            IdentifyEvent::Error { .. } => {}
+            IdentifyEvent::SendBack { .. } => {}
+        }
     }
 }
 
@@ -177,7 +217,7 @@ pub enum BehaviourEvent {
     GossipMessage {
         source: PeerId,
         topics: Vec<TopicHash>,
-        message: Box<PubsubMessage>,
+        message: PubsubMessage,
     },
 }
 
@@ -185,8 +225,28 @@ pub enum BehaviourEvent {
 #[derive(Debug, Clone, PartialEq)]
 pub enum PubsubMessage {
     /// Gossipsub message providing notification of a new block.
-    //Block(BeaconBlock<types::MinimalEthSpec>),
+    Block(Vec<u8>),
     /// Gossipsub message providing notification of a new attestation.
-    //Attestation(Attestation<types::MinimalEthSpec>),
-    Other(Vec<u8>)
+    Attestation(Vec<u8>),
+    /// Gossipsub message from an unknown topic.
+    Unknown(Vec<u8>),
+}
+
+impl PubsubMessage {
+    /* Note: This is assuming we are not hashing topics. If we choose to hash topics, these will
+     * need to be modified.
+     *
+     * Also note that a message can be associated with many topics. As soon as one of the topics is
+     * known we match. If none of the topics are known we return an unknown state.
+     */
+    fn from_topics(topics: &Vec<TopicHash>, data: Vec<u8>) -> Self {
+        for topic in topics {
+            match topic.as_str() {
+                BEACON_BLOCK_TOPIC => return PubsubMessage::Block(data),
+                BEACON_ATTESTATION_TOPIC => return PubsubMessage::Attestation(data),
+                _ => {}
+            }
+        }
+        PubsubMessage::Unknown(data)
+    }
 }

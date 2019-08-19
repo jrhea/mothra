@@ -2,12 +2,13 @@ use super::methods::{RPCErrorResponse, RequestId};
 use super::protocol::{RPCError, RPCProtocol, RPCRequest};
 use super::RPCEvent;
 use crate::rpc::protocol::{InboundFramed, OutboundFramed};
+use core::marker::PhantomData;
 use fnv::FnvHashMap;
 use futures::prelude::*;
-use libp2p::core::protocols_handler::{
+use libp2p::core::upgrade::{InboundUpgrade, OutboundUpgrade};
+use libp2p::swarm::protocols_handler::{
     KeepAlive, ProtocolsHandler, ProtocolsHandlerEvent, ProtocolsHandlerUpgrErr, SubstreamProtocol,
 };
-use libp2p::core::upgrade::{InboundUpgrade, OutboundUpgrade};
 use smallvec::SmallVec;
 use std::time::{Duration, Instant};
 use tokio_io::{AsyncRead, AsyncWrite};
@@ -52,6 +53,9 @@ where
 
     /// After the given duration has elapsed, an inactive connection will shutdown.
     inactive_timeout: Duration,
+
+    /// Marker to pin the generic stream.
+    _phantom: PhantomData<TSubstream>,
 }
 
 /// An outbound substream is waiting a response from the user.
@@ -104,6 +108,7 @@ where
             max_dial_negotiated: 8,
             keep_alive: KeepAlive::Yes,
             inactive_timeout,
+            _phantom: PhantomData,
         }
     }
 

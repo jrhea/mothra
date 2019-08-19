@@ -3,8 +3,8 @@ use crate::error;
 use crate::multiaddr::Protocol;
 use crate::rpc::{RPCEvent};
 use crate::NetworkConfig;
-use crate::{TopicBuilder, TopicHash};
-use crate::{BEACON_ATTESTATION_TOPIC, BEACON_PUBSUB_TOPIC};
+use crate::{Topic, TopicHash};
+use crate::{BEACON_ATTESTATION_TOPIC, BEACON_BLOCK_TOPIC};
 use futures::prelude::*;
 use futures::Stream;
 use libp2p::core::{
@@ -88,16 +88,33 @@ impl Service {
             ),
         };
 
+        // attempt to connect to user-input libp2p nodes
+        for multiaddr in config.libp2p_nodes {
+            match Swarm::dial_addr(&mut swarm, multiaddr.clone()) {
+                Ok(()) => debug!(log, "Dialing libp2p node: {}", multiaddr),
+                Err(err) => debug!(
+                    log,
+                    "Could not connect to node: {} error: {:?}", multiaddr, err
+                ),
+            };
+        }
+
         // subscribe to default gossipsub topics
         let mut topics = vec![];
-        topics.push(BEACON_ATTESTATION_TOPIC.to_string());
-        topics.push(BEACON_PUBSUB_TOPIC.to_string());
-        topics.append(&mut config.topics.clone());
+        topics.push(Topic::new(BEACON_ATTESTATION_TOPIC.into()));
+        topics.push(Topic::new(BEACON_BLOCK_TOPIC.into()));
+        topics.append(
+            &mut config
+                .topics
+                .iter()
+                .cloned()
+                .map(|s| Topic::new(s))
+                .collect(),
+        );
 
         let mut subscribed_topics = vec![];
         for topic in topics {
-            let t = TopicBuilder::new(topic.clone()).build();
-            if swarm.subscribe(t) {
+            if swarm.subscribe(topic.clone()) {
                 debug!(log, "Subscribed to topic: {:?}", topic);
                 subscribed_topics.push(topic);
             } else {
@@ -128,9 +145,21 @@ impl Stream for Service {
                         topics,
                         message,
                     } => {
-                        //debug!(self.log, "Pubsub message received: {:?}", message);
-                        match *message.clone() {
-                            PubsubMessage::Other(value) => {
+                        //trace!(self.log, "Gossipsub message received"; "Message" => format!("{:?}", message));
+                        match message.clone() {
+                            PubsubMessage::Attestation(value) => {
+                                self.tx.lock().unwrap().send(Message {
+                                    command: "GOSSIP".to_string(),
+                                    value: value
+                                }).unwrap();
+                            },
+                             PubsubMessage::Block(value) => {
+                                self.tx.lock().unwrap().send(Message {
+                                    command: "GOSSIP".to_string(),
+                                    value: value
+                                }).unwrap();
+                            },
+                            PubsubMessage::Unknown(value) => {
                                 self.tx.lock().unwrap().send(Message {
                                     command: "GOSSIP".to_string(),
                                     value: value
@@ -207,7 +236,7 @@ pub enum Libp2pEvent {
     PubsubMessage {
         source: PeerId,
         topics: Vec<TopicHash>,
-        message: Box<PubsubMessage>,
+        message: PubsubMessage,
     },
 }
 

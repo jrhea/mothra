@@ -1,4 +1,3 @@
-use crate::rpc::methods::*;
 use crate::rpc::{
     codec::base::OutboundCodec,
     protocol::{ProtocolId, RPCError},
@@ -37,10 +36,9 @@ impl Encoder for SerenityInboundCodec {
 
     fn encode(&mut self, item: Self::Item, dst: &mut BytesMut) -> Result<(), Self::Error> {
         let bytes = match item {
-
             RPCErrorResponse::Success(resp) => {
                 match resp {
-                    RPCResponse::Hello(res) => Bytes::from(res.value),
+                    RPCResponse::Message(res) => Bytes::from(res),
                 }
             },
             RPCErrorResponse::InvalidRequest(err) => Bytes::from(err.as_string()),
@@ -66,14 +64,11 @@ impl Decoder for SerenityInboundCodec {
 
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
         match self.inner.decode(src).map_err(RPCError::from) {
-            Ok(Some(_packet)) => match self.protocol.message_name.as_str() {
-                "hello" => match self.protocol.version.as_str() {
-                    "1.0.0" => Ok(Some(RPCRequest::Hello(HelloMessage{
-                        value: String::from_utf8(_packet.to_vec()).unwrap(),
-                    }
-                    ))),
-                    _ => Err(RPCError::InvalidProtocol("Unknown HELLO version")),
-                },
+            Ok(Some(packet)) => match self.protocol.message_name.as_str() {
+                "message" => match self.protocol.version.as_str() {
+                    "1.0.0" => Ok(Some(RPCRequest::Message(packet.to_vec()))),
+                    _ => Err(RPCError::InvalidProtocol("Unknown Message version")),
+                }
                 _ => Err(RPCError::InvalidProtocol("Unknown message name.")),
             },
             Ok(None) => Ok(None),
@@ -111,7 +106,7 @@ impl Encoder for SerenityOutboundCodec {
 
     fn encode(&mut self, item: Self::Item, dst: &mut BytesMut) -> Result<(), Self::Error> {
         let bytes = match item {
-            RPCRequest::Hello(req) => Bytes::from(req.value),
+            RPCRequest::Message(req) => Bytes::from(req),
         };
         // length-prefix
         self.inner
@@ -127,14 +122,11 @@ impl Decoder for SerenityOutboundCodec {
 
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
         match self.inner.decode(src).map_err(RPCError::from) {
-            Ok(Some(_packet)) => match self.protocol.message_name.as_str() {
-                "hello" => match self.protocol.version.as_str() {
+            Ok(Some(packet)) => match self.protocol.message_name.as_str() {
+                "message" => match self.protocol.version.as_str() {
                     
-                    "1.0.0" => Ok(Some(RPCResponse::Hello(HelloMessage{
-                        value: String::from_utf8(_packet.to_vec()).unwrap(),
-                    }
-                    ))),
-                    _ => Err(RPCError::InvalidProtocol("Unknown HELLO version.")),
+                    "1.0.0" => Ok(Some(RPCResponse::Message(packet.to_vec()))),
+                    _ => Err(RPCError::InvalidProtocol("Unknown rpc message version.")),
                 },
                 _ => Err(RPCError::InvalidProtocol("Unknown method")),
             },

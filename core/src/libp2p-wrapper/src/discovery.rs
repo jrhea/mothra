@@ -4,13 +4,11 @@ use crate::{error, NetworkConfig};
 /// Currently using discv5 for peer discovery.
 ///
 use futures::prelude::*;
-use libp2p::core::swarm::{
-    ConnectedPoint, NetworkBehaviour, NetworkBehaviourAction, PollParameters,
-};
-use libp2p::core::{identity::Keypair, Multiaddr, PeerId, ProtocolsHandler};
+use libp2p::core::{identity::Keypair, ConnectedPoint, Multiaddr, PeerId};
 use libp2p::discv5::{Discv5, Discv5Event};
 use libp2p::enr::{Enr, EnrBuilder, NodeId};
 use libp2p::multiaddr::Protocol;
+use libp2p::swarm::{NetworkBehaviour, NetworkBehaviourAction, PollParameters, ProtocolsHandler};
 use slog::{debug, info, o, warn};
 use std::collections::HashSet;
 use std::fs::File;
@@ -28,7 +26,7 @@ const INITIAL_SEARCH_DELAY: u64 = 5;
 /// Local ENR storage filename.
 const ENR_FILENAME: &str = "enr.dat";
 
-/// Artemis discovery behaviour. This provides peer management and discovery using the Discv5
+/// Lighthouse discovery behaviour. This provides peer management and discovery using the Discv5
 /// libp2p protocol.
 pub struct Discovery<TSubstream> {
     /// The peers currently connected to libp2p streams.
@@ -36,6 +34,9 @@ pub struct Discovery<TSubstream> {
 
     /// The target number of connected peers on the libp2p interface.
     max_peers: usize,
+
+    /// directory to save ENR to
+    enr_dir: String,
 
     /// The delay between peer discovery searches.
     peer_discovery_delay: Delay,
@@ -54,9 +55,6 @@ pub struct Discovery<TSubstream> {
 
     /// Logger for the discovery behaviour.
     log: slog::Logger,
-
-    /// directory to save ENR to
-    enr_dir: String,
 }
 
 impl<TSubstream> Discovery<TSubstream> {
