@@ -174,6 +174,20 @@ pub fn config(args: Vec<String>) -> ArgMatches<'static> {
             .takes_value(true),
     )
     .arg(
+        Arg::with_name("topics")
+            .long("topics")
+            .value_name("STRING")
+            .help("One or more comma-delimited gossipsub topic strings to subscribe to.")
+            .takes_value(true),
+    )
+        .arg(
+        Arg::with_name("libp2p-addresses")
+            .long("libp2p-addresses")
+            .value_name("MULTIADDR")
+            .help("One or more comma-delimited multiaddrs to manually connect to a libp2p peer without an ENR.")
+            .takes_value(true),
+        )
+    .arg(
         Arg::with_name("debug-level")
             .long("debug-level")
             .value_name("LEVEL")
