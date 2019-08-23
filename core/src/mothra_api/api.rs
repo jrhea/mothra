@@ -17,7 +17,7 @@ use tokio::sync::mpsc;
 use super::network::{Network,NetworkMessage};
 
 /// The interval between heartbeat events.
-pub const HEARTBEAT_INTERVAL_SECONDS: u64 = 15;
+pub const HEARTBEAT_INTERVAL_SECONDS: u64 = 10;
 
 /// Create a warning log whenever the peer count is at or below this value.
 pub const WARN_PEER_COUNT: usize = 1;
@@ -42,10 +42,11 @@ pub fn start(args: ArgMatches, local_tx: &sync::Sender<GossipData>,local_rx: &sy
     ).unwrap();
     
     monitor(&network, executor, log.clone());
-    let dur = time::Duration::from_millis(100);
+    let dur = time::Duration::from_millis(50);
     loop {
         match local_rx.try_recv(){
             Ok(local_message) => {
+                //info!(log,  "in api.rs: sending message with topic {:?}",local_message.topic);
                 gossip(network_send.clone(),local_message.topic,local_message.value.to_vec(),log.new(o!("API" => "gossip()")));
             }
             Err(_) => {
@@ -54,6 +55,7 @@ pub fn start(args: ArgMatches, local_tx: &sync::Sender<GossipData>,local_rx: &sy
         }
         match network_rx.try_recv(){
             Ok(network_message) => {
+                //info!(log,  "in api.rs: receiving message with topic {:?}",network_message.topic);
                 local_tx.send(network_message).unwrap();
             }
             Err(_) => {

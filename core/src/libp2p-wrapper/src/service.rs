@@ -160,7 +160,7 @@ impl Stream for Service {
                         topics,
                         message,
                     } => {
-                        //trace!(self.log, "Gossipsub message received"; "Message" => format!("{:?}", message));
+                        //info!(self.log, "Gossipsub message received"; "Message" => format!("{:?}", message));
                         match message.clone() {
                             PubsubMessage::Attestation(value) => {
                                 self.tx.lock().unwrap().send(GossipData {

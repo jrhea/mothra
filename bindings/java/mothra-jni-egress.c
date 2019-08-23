@@ -29,6 +29,7 @@ JNIEXPORT void JNICALL Java_net_p2p_mothra_Start (JNIEnv *jenv, jclass jcls, job
 
 JNIEXPORT void JNICALL Java_net_p2p_mothra_SendGossip (JNIEnv *jenv, jclass jcls, jbyteArray jtopic, jbyteArray jdata){
     int data_length = (*jenv)->GetArrayLength(jenv, jdata);
+    int topic_length = (*jenv)->GetArrayLength(jenv, jtopic);
     jbyte *topic = (jbyte *) 0 ;
     jbyte *data = (jbyte *) 0 ;
     if (jtopic) {
@@ -41,7 +42,7 @@ JNIEXPORT void JNICALL Java_net_p2p_mothra_SendGossip (JNIEnv *jenv, jclass jcls
         data = (*jenv)->GetByteArrayElements(jenv,jdata,&isCopy);
         if (!data) return ;
     }
-    libp2p_send_gossip(topic,data,data_length);
+    libp2p_send_gossip(topic,topic_length,data,data_length);
     if (topic) (*jenv)->ReleaseByteArrayElements(jenv, jtopic, topic, 0);
     if (data) (*jenv)->ReleaseByteArrayElements(jenv, jdata, data, 0);
 }

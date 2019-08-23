@@ -11,6 +11,7 @@ use std::ops::Range;
 use std::cell::RefCell;
 use std::cell::RefMut;
 use cast::i16;
+use cast::i8;
 use slog::{info, debug, warn, o, Drain};
 use libp2p_wrapper::GossipData;
 use mothra_api::api;
@@ -107,21 +108,14 @@ pub extern fn libp2p_start(args_c_char: *mut *mut c_char, length: isize) {
 }
 
 #[no_mangle]
-pub extern fn libp2p_send_gossip(topic_c_char: *mut c_char, data_c_uchar: *mut c_uchar, data_length: usize) {
+pub extern fn libp2p_send_gossip(topic_c_uchar: *mut c_uchar, topic_length: usize, data_c_uchar: *mut c_uchar, data_length: usize) {
     let mut data = unsafe { std::slice::from_raw_parts_mut(data_c_uchar, data_length) };
-    let topic_cstr = unsafe { CStr::from_ptr(topic_c_char) };
-    match topic_cstr.to_str() {
-        Ok(topic) => {
-            let gossip_data = GossipData {
-                topic: topic.to_string(), 
-                value: data.to_vec()
-            };
-            get_tx!().as_mut().unwrap().send(gossip_data);
-        }
-        Err(_) => {
-           // warn!(log,"Invalid topic string")
-        }
-    }
+    let topic = unsafe { std::str::from_utf8_unchecked(std::slice::from_raw_parts(topic_c_uchar, topic_length)) };
+    let gossip_data = GossipData {
+        topic: topic.to_string(), 
+        value: data.to_vec()
+    };
+    get_tx!().as_mut().unwrap().send(gossip_data);
 }
 
 #[no_mangle]

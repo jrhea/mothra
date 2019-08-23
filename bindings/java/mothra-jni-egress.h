@@ -10,7 +10,7 @@ JNIEXPORT void JNICALL Java_net_p2p_mothra_Start(JNIEnv *, jclass, jobjectArray)
 JNIEXPORT void JNICALL Java_net_p2p_mothra_SendGossip(JNIEnv *, jclass, jbyteArray, jbyteArray);
 
 extern void libp2p_start(char**, int);
-extern void libp2p_send_gossip(jbyte*, jbyte*, int);
+extern void libp2p_send_gossip(jbyte*, int, jbyte*, int);
 
 #ifdef __cplusplus
 }
