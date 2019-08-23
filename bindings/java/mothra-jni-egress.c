@@ -27,14 +27,21 @@ JNIEXPORT void JNICALL Java_net_p2p_mothra_Start (JNIEnv *jenv, jclass jcls, job
     free(args);
 }
 
-JNIEXPORT void JNICALL Java_net_p2p_mothra_SendGossip (JNIEnv *jenv, jclass jcls, jbyteArray jmessage){
-    int length = (*jenv)->GetArrayLength(jenv, jmessage);
-    jbyte *message = (jbyte *) 0 ;
-    if (jmessage) {
+JNIEXPORT void JNICALL Java_net_p2p_mothra_SendGossip (JNIEnv *jenv, jclass jcls, jbyteArray jtopic, jbyteArray jdata){
+    int data_length = (*jenv)->GetArrayLength(jenv, jdata);
+    jbyte *topic = (jbyte *) 0 ;
+    jbyte *data = (jbyte *) 0 ;
+    if (jtopic) {
         jboolean isCopy = JNI_TRUE;
-        message = (*jenv)->GetByteArrayElements(jenv,jmessage,&isCopy);
-        if (!message) return ;
+        topic = (*jenv)->GetByteArrayElements(jenv,jtopic,&isCopy);
+        if (!topic) return ;
     }
-    libp2p_send_gossip(message,length);
-    if (message) (*jenv)->ReleaseByteArrayElements(jenv, jmessage, message, 0);
+    if (jdata) {
+        jboolean isCopy = JNI_TRUE;
+        data = (*jenv)->GetByteArrayElements(jenv,jdata,&isCopy);
+        if (!data) return ;
+    }
+    libp2p_send_gossip(topic,data,data_length);
+    if (topic) (*jenv)->ReleaseByteArrayElements(jenv, jtopic, topic, 0);
+    if (data) (*jenv)->ReleaseByteArrayElements(jenv, jdata, data, 0);
 }

@@ -12,7 +12,7 @@ use tokio::timer::Interval;
 use tokio_timer::clock::Clock;
 use futures::Future;
 use clap::{App, Arg, AppSettings};
-use libp2p_wrapper::{NetworkConfig, Topic, BEACON_ATTESTATION_TOPIC, BEACON_BLOCK_TOPIC,Message};
+use libp2p_wrapper::{NetworkConfig, Topic, BEACON_ATTESTATION_TOPIC, BEACON_BLOCK_TOPIC,GossipData};
 use tokio::sync::mpsc;
 use super::network::{Network,NetworkMessage};
 
@@ -22,7 +22,7 @@ pub const HEARTBEAT_INTERVAL_SECONDS: u64 = 15;
 /// Create a warning log whenever the peer count is at or below this value.
 pub const WARN_PEER_COUNT: usize = 1;
 
-pub fn start(args: ArgMatches, local_tx: &sync::Sender<Message>,local_rx: &sync::Receiver<Message>, log: slog::Logger) {
+pub fn start(args: ArgMatches, local_tx: &sync::Sender<GossipData>,local_rx: &sync::Receiver<GossipData>, log: slog::Logger) {
     info!(log,"Initializing libP2P....");
     let runtime = Builder::new()
         .name_prefix("api-")
@@ -46,9 +46,7 @@ pub fn start(args: ArgMatches, local_tx: &sync::Sender<Message>,local_rx: &sync:
     loop {
         match local_rx.try_recv(){
             Ok(local_message) => {
-                if local_message.command == "GOSSIP".to_string() {
-                    gossip(network_send.clone(), local_message.value.to_vec(),log.new(o!("API" => "gossip()")));
-                }
+                gossip(network_send.clone(),local_message.topic,local_message.value.to_vec(),log.new(o!("API" => "gossip()")));
             }
             Err(_) => {
                 
@@ -102,11 +100,10 @@ fn monitor(
 
 }
 
-fn gossip( mut network_send: mpsc::UnboundedSender<NetworkMessage>, message: Vec<u8>, log: slog::Logger){
-    let topic = Topic::new(BEACON_BLOCK_TOPIC.to_string());
+fn gossip( mut network_send: mpsc::UnboundedSender<NetworkMessage>, topic: String, data: Vec<u8>, log: slog::Logger){
     network_send.try_send(NetworkMessage::Publish {
-        topics: vec![topic],
-        message: message,
+        topics: vec![Topic::new(topic)],
+        message: data,
     }).unwrap_or_else(|_| {
         warn!(
             log,

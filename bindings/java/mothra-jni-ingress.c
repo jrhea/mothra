@@ -12,29 +12,32 @@ JNIEXPORT void JNICALL Java_net_p2p_mothra_Init(JNIEnv* jenv, jclass jcls)
    assert (rs == JNI_OK);
 }
 
-void receive_gossip(unsigned char* message, int length) {
+void receive_gossip(unsigned char* topic, int topic_length, unsigned char* data, int data_length) {
     JNIEnv *jenv;
     jint rs = (*jvm)->AttachCurrentThread(jvm, (void**)&jenv, NULL);
     assert (rs == JNI_OK);
     if(jenv != NULL) {
         jclass mothra_class;
         jmethodID receivegossip_method;
-        jbyteArray jmessage;
+        jbyteArray jtopic;
+        jbyteArray jdata;
         mothra_class = (*jenv)->FindClass(jenv, "net/p2p/mothra");
         if(!mothra_class){
             detach(jenv);
         }
         //Put the native unsigned chars in the java byte array
-        jmessage = (*jenv)->NewByteArray(jenv, length);
-        (*jenv)->SetByteArrayRegion(jenv, jmessage, 0, length, (jbyte *)message);
-        if(!jmessage){
+        jtopic = (*jenv)->NewByteArray(jenv, topic_length);
+        jdata = (*jenv)->NewByteArray(jenv, data_length);
+        (*jenv)->SetByteArrayRegion(jenv, jdata, 0, data_length, (jbyte *)data);
+        (*jenv)->SetByteArrayRegion(jenv, jtopic, 0, topic_length, (jbyte *)topic);
+        if(!jdata || !jtopic){
             detach(jenv);
         }
-        receivegossip_method = (*jenv)->GetStaticMethodID(jenv, mothra_class, "ReceiveGossip", "([B)V");
+        receivegossip_method = (*jenv)->GetStaticMethodID(jenv, mothra_class, "ReceiveGossip", "([B[B)V");
         if(!receivegossip_method){
             detach(jenv);
         }
-        (*jenv)->CallStaticVoidMethod(jenv, mothra_class, receivegossip_method, jmessage);
+        (*jenv)->CallStaticVoidMethod(jenv, mothra_class, receivegossip_method, jtopic, jdata);
     }
 }
 

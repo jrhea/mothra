@@ -14,20 +14,20 @@ public class example {
         Runnable run = () -> {
             mothra.Init();
             mothra.Start(processed_args);
-            mothra.ReceivedMessage = example::printMessage;
+            mothra.ReceivedGossipMessage = example::printMessage;
         };
         Executors.newSingleThreadExecutor().execute(run);
         Scanner scanner = new Scanner(System.in);
         while(true){
             System.out.print("Enter a message to send: ");
             String message = scanner.next();
-            mothra.SendGossip(message.getBytes());
+            mothra.SendGossip("beacon_block".getBytes(),message.getBytes());
         }
 
     }
 
-    public static Boolean printMessage(byte[] message){
-        System.out.println("Java: received this message from another peer - " + new String(message));
+    public static Boolean printMessage(String topic, byte[] message){
+        System.out.println("Java: received a message from peer. " + topic + ":" + new String(message));
         return true;
     }
 }

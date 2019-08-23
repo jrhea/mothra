@@ -12,22 +12,22 @@ use std::cell::RefCell;
 use std::cell::RefMut;
 use cast::i16;
 use slog::{info, debug, warn, o, Drain};
-use libp2p_wrapper::Message;
+use libp2p_wrapper::GossipData;
 use mothra_api::api;
 
 #[derive(Debug)]
 struct Global {
-    tx: RefCell<Option<Sender<Message>>>
+    tx: RefCell<Option<Sender<GossipData>>>
 }
 
 static mut GLOBAL: Global = Global{ tx:  RefCell::new(None) };
 
 impl Global {
-    fn set(&mut self, value: &RefCell<Option<Sender<Message>>>) {
+    fn set(&mut self, value: &RefCell<Option<Sender<GossipData>>>) {
         self.tx.swap(value);
     }
 
-    fn get(&self) -> RefMut<Option<Sender<Message>>> {
+    fn get(&self) -> RefMut<Option<Sender<GossipData>>> {
         self.tx.borrow_mut()
     }
 }
@@ -49,7 +49,8 @@ macro_rules! get_tx {
 }
 
 extern {
-    fn receive_gossip(message_c_char: *mut c_uchar, length: i16);
+    fn receive_gossip(topic_c_uchar: *mut c_uchar, topic_length: i16, data_c_uchar: *mut c_uchar, data_length: i16);
+    //fn receive_rpc(message_c_char: *mut c_uchar, length: i16);
 }
 
 #[no_mangle]
@@ -87,11 +88,13 @@ pub extern fn libp2p_start(args_c_char: *mut *mut c_char, length: isize) {
         loop{
             match rx2.recv(){
                 Ok(mut network_message) => {
-                    if network_message.command == "GOSSIP".to_string() {                
-                        let length = i16(network_message.value.len()).unwrap();
-                        unsafe {
-                            receive_gossip(network_message.value.as_mut_ptr(), length);
-                        }
+                    let topic_length = i16(network_message.topic.len()).unwrap();
+                    let topic = network_message.topic.into_bytes().as_mut_ptr();
+                    let data_length = i16(network_message.value.len()).unwrap();
+                    let data = network_message.value.as_mut_ptr();
+                    
+                    unsafe {
+                        receive_gossip(topic, topic_length, data, data_length);
                     }
                 }
                 Err(_) => {
@@ -104,12 +107,30 @@ pub extern fn libp2p_start(args_c_char: *mut *mut c_char, length: isize) {
 }
 
 #[no_mangle]
-pub extern fn libp2p_send_gossip(message_c_uchar: *mut c_uchar, length: usize) {
-    let mut message_bytes = unsafe { std::slice::from_raw_parts_mut(message_c_uchar, length) };
+pub extern fn libp2p_send_gossip(topic_c_char: *mut c_char, data_c_uchar: *mut c_uchar, data_length: usize) {
+    let mut data = unsafe { std::slice::from_raw_parts_mut(data_c_uchar, data_length) };
+    let topic_cstr = unsafe { CStr::from_ptr(topic_c_char) };
+    match topic_cstr.to_str() {
+        Ok(topic) => {
+            let gossip_data = GossipData {
+                topic: topic.to_string(), 
+                value: data.to_vec()
+            };
+            get_tx!().as_mut().unwrap().send(gossip_data);
+        }
+        Err(_) => {
+           // warn!(log,"Invalid topic string")
+        }
+    }
+}
 
-    let message = Message {
-        command: "GOSSIP".to_string(), 
-        value: message_bytes.to_vec()
-    };
-    get_tx!().as_mut().unwrap().send(message);
+#[no_mangle]
+pub extern fn libp2p_send_rpc(message_c_uchar: *mut c_uchar, length: usize) {
+    // let mut message_bytes = unsafe { std::slice::from_raw_parts_mut(message_c_uchar, length) };
+
+    // let message = Message {
+    //     command: "RPC".to_string(), 
+    //     value: message_bytes.to_vec()
+    // };
+    // get_tx!().as_mut().unwrap().send(message);
 }
