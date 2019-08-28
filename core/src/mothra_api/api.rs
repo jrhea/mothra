@@ -46,11 +46,12 @@ pub fn start(args: ArgMatches, local_tx: &sync::Sender<Message>,local_rx: &sync:
     loop {
         match local_rx.try_recv(){
             Ok(local_message) => {
-                //info!(log,  "in api.rs: sending message with topic {:?}",local_message.topic);
                 if local_message.category == GOSSIP.to_string(){
+                    info!(log,  "in api.rs: sending gossip with topic {:?}",local_message.command);
                     gossip(network_send.clone(),local_message.command,local_message.value.to_vec(),log.new(o!("API" => "gossip()")));
                 }
                 else if local_message.category == RPC.to_string(){
+                    info!(log,  "in api.rs: sending rpc_method of type {:?}",local_message.command);
                     rpc(network_send.clone(),local_message.command,local_message.peer,local_message.value.to_vec(),log.new(o!("API" => "rpc()")));
                 }
             }
@@ -60,7 +61,7 @@ pub fn start(args: ArgMatches, local_tx: &sync::Sender<Message>,local_rx: &sync:
         }
         match network_rx.try_recv(){
             Ok(network_message) => {
-                //info!(log,  "in api.rs: receiving message with topic {:?}",network_message.topic);
+                info!(log,  "in api.rs: receiving message {:?}",network_message.category);
                 local_tx.send(network_message).unwrap();
             }
             Err(_) => {

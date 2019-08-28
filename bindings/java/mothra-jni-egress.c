@@ -32,13 +32,12 @@ JNIEXPORT void JNICALL Java_net_p2p_mothra_SendGossip (JNIEnv *jenv, jclass jcls
     int topic_length = (*jenv)->GetArrayLength(jenv, jtopic);
     jbyte *topic = (jbyte *) 0 ;
     jbyte *data = (jbyte *) 0 ;
+    jboolean isCopy = JNI_TRUE;
     if (jtopic) {
-        jboolean isCopy = JNI_TRUE;
         topic = (*jenv)->GetByteArrayElements(jenv,jtopic,&isCopy);
         if (!topic) return ;
     }
     if (jdata) {
-        jboolean isCopy = JNI_TRUE;
         data = (*jenv)->GetByteArrayElements(jenv,jdata,&isCopy);
         if (!data) return ;
     }
@@ -48,27 +47,27 @@ JNIEXPORT void JNICALL Java_net_p2p_mothra_SendGossip (JNIEnv *jenv, jclass jcls
 }
 
 JNIEXPORT void JNICALL Java_net_p2p_mothra_SendRPC (JNIEnv *jenv, jclass jcls, jbyteArray jmethod, jbyteArray jpeer, jbyteArray jdata){
+    printf("Java_net_p2p_mothra_SendRPC 1\n");
     int data_length = (*jenv)->GetArrayLength(jenv, jdata);
     int method_length = (*jenv)->GetArrayLength(jenv, jmethod);
     int peer_length = (*jenv)->GetArrayLength(jenv, jpeer);
     jbyte *data = (jbyte *) 0 ;
     jbyte *method = (jbyte *) 0 ;
     jbyte *peer = (jbyte *) 0 ;
+    jboolean isCopy = JNI_TRUE;
     if (jdata) {
-        jboolean isCopy = JNI_TRUE;
         data = (*jenv)->GetByteArrayElements(jenv,jdata,&isCopy);
         if (!data) return ;
     }
     if (jpeer) {
-        jboolean isCopy = JNI_TRUE;
-        method = (*jenv)->GetByteArrayElements(jenv,jpeer,&isCopy);
+        peer = (*jenv)->GetByteArrayElements(jenv,jpeer,&isCopy);
         if (!peer) return ;
     }
     if (jmethod) {
-        jboolean isCopy = JNI_TRUE;
         method = (*jenv)->GetByteArrayElements(jenv,jmethod,&isCopy);
         if (!method) return ;
     }
+    printf("Before calling: libp2p_send_rpc\n");
     libp2p_send_rpc(method,method_length,peer,peer_length,data,data_length);
     if (data) (*jenv)->ReleaseByteArrayElements(jenv, jdata, data, 0);
     if (peer) (*jenv)->ReleaseByteArrayElements(jenv, jpeer, peer, 0);

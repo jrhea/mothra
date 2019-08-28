@@ -14,8 +14,8 @@ public class example {
         Runnable run = () -> {
             mothra.Init();
             mothra.Start(processed_args);
-            mothra.ReceivedGossipMessage = example::printMessage;
-            mothra.ReceivedRPCMessage = example::printMessage;
+            mothra.ReceivedGossipMessage = example::printGossipMessage;
+            mothra.ReceivedRPCMessage = example::printRPCMessage;
         };
         Executors.newSingleThreadExecutor().execute(run);
         Scanner scanner = new Scanner(System.in);
@@ -37,12 +37,12 @@ public class example {
 
     }
 
-    public static Boolean printMessage(String topic, byte[] message){
+    public static Boolean printGossipMessage(String topic, byte[] message){
         System.out.println("Java: received a gossip message. " + topic + ":" + new String(message));
         return true;
     }
 
-    public static Boolean printMessage(String method, String peer, byte[] message){
+    public static Boolean printRPCMessage(String method, String peer, byte[] message){
         System.out.println("Java: rpc method: " + method + " was invoked by peer: " + peer + " with message: " + new String(message));
         return true;
     }

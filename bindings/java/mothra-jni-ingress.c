@@ -35,6 +35,7 @@ void receive_gossip(unsigned char* topic, int topic_length, unsigned char* data,
         }
         receivegossip_method = (*jenv)->GetStaticMethodID(jenv, mothra_class, "ReceiveGossip", "([B[B)V");
         if(!receivegossip_method){
+            printf("JNI Error: GetStaticMethodID was unable to find method: ReceiveGossip with signature: ([B[B)V\n");
             detach(jenv);
         }
         (*jenv)->CallStaticVoidMethod(jenv, mothra_class, receivegossip_method, jtopic, jdata);
@@ -42,6 +43,7 @@ void receive_gossip(unsigned char* topic, int topic_length, unsigned char* data,
 }
 
 void receive_rpc(unsigned char* method, int method_length, unsigned char* peer, int peer_length, unsigned char* data, int data_length) {
+    printf("In receive_rpc 1\n");
     JNIEnv *jenv;
     jint rs = (*jvm)->AttachCurrentThread(jvm, (void**)&jenv, NULL);
     assert (rs == JNI_OK);
@@ -67,6 +69,7 @@ void receive_rpc(unsigned char* method, int method_length, unsigned char* peer, 
         }
         receiverpc_method = (*jenv)->GetStaticMethodID(jenv, mothra_class, "ReceiveRPC", "([B[B[B)V");
         if(!receiverpc_method){
+            printf("JNI Error: GetStaticMethodID was unable to find method: ReceiveRPC with signature: ([B[B[B)V\n");
             detach(jenv);
         }
         (*jenv)->CallStaticVoidMethod(jenv, mothra_class, receiverpc_method, jmethod, jpeer, jdata);

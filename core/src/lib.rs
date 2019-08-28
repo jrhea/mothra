@@ -94,11 +94,11 @@ pub extern fn libp2p_start(args_c_char: *mut *mut c_char, length: isize) {
                         let topic = network_message.command.into_bytes().as_mut_ptr();
                         let data_length = i16(network_message.value.len()).unwrap();
                         let data = network_message.value.as_mut_ptr();
-                        
                         unsafe {
                             receive_gossip(topic, topic_length, data, data_length);
                         }
-                    } else if network_message.category == GOSSIP.to_string(){
+                    } else if network_message.category == RPC.to_string(){
+                        debug!(log, "received RPC from peer: {:?}", network_message.peer);
                         let method_length = i16(network_message.command.len()).unwrap();
                         let method = network_message.command.into_bytes().as_mut_ptr();
                         let peer_length = i16(network_message.peer.len()).unwrap();
