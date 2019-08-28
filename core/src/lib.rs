@@ -51,7 +51,7 @@ macro_rules! get_tx {
 
 extern {
     fn receive_gossip(topic_c_uchar: *mut c_uchar, topic_length: i16, data_c_uchar: *mut c_uchar, data_length: i16);
-    fn receive_rpc(method_c_uchar: *mut c_uchar, method_length: i16, peer_c_uchar: *mut c_uchar, peer_length: usize, data_c_uchar: *mut c_uchar, data_length: i16);
+    fn receive_rpc(method_c_uchar: *mut c_uchar, method_length: i16, peer_c_uchar: *mut c_uchar, peer_length: i16, data_c_uchar: *mut c_uchar, data_length: i16);
 }
 
 #[no_mangle]
@@ -97,6 +97,16 @@ pub extern fn libp2p_start(args_c_char: *mut *mut c_char, length: isize) {
                         
                         unsafe {
                             receive_gossip(topic, topic_length, data, data_length);
+                        }
+                    } else if network_message.category == GOSSIP.to_string(){
+                        let method_length = i16(network_message.command.len()).unwrap();
+                        let method = network_message.command.into_bytes().as_mut_ptr();
+                        let peer_length = i16(network_message.peer.len()).unwrap();
+                        let peer = network_message.peer.into_bytes().as_mut_ptr();
+                        let data_length = i16(network_message.value.len()).unwrap();
+                        let data = network_message.value.as_mut_ptr();
+                        unsafe {
+                            receive_rpc(method, method_length, peer, peer_length, data, data_length);
                         }
                     }
                 }
