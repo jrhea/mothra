@@ -94,7 +94,7 @@ fn network_service(
                 Ok(Async::Ready(Some(message))) => match message {
                     NetworkMessage::Send(peer_id, outgoing_message) => match outgoing_message {
                         OutgoingMessage::RPC(rpc_event) => {
-                            //debug!(log, "Sending RPC Event: {:?}", rpc_event);
+                            debug!(log, "Sending RPC Event: {:?}", rpc_event);
                             libp2p_service.lock().swarm.send_rpc(peer_id, rpc_event);
                         }
                     },

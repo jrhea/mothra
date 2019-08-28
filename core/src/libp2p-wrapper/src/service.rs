@@ -33,14 +33,16 @@ pub const RPC: &str = "RPC";
 pub struct Message {
     pub category: String,
     pub command: String,
+    pub peer: String,
     pub value: Vec<u8>,
 }
 
 impl Message {
-    pub fn new (category: String, command: String, value: Vec<u8>) -> Message {
+    pub fn new (category: String, command: String, peer: String, value: Vec<u8>) -> Message {
         Message {
             category: category,
             command: command,
+            peer: peer,
             value: value
         }
     }
@@ -157,6 +159,7 @@ impl Stream for Service {
                                 self.tx.lock().unwrap().send(Message {
                                     category: GOSSIP.to_string(),
                                     command: BEACON_ATTESTATION_TOPIC.to_string(),
+                                    peer: Default::default(),
                                     value: value
                                 }).unwrap();
                             },
@@ -164,6 +167,7 @@ impl Stream for Service {
                                 self.tx.lock().unwrap().send(Message {
                                     category: GOSSIP.to_string(),
                                     command: BEACON_BLOCK_TOPIC.to_string(),
+                                    peer: Default::default(),
                                     value: value
                                 }).unwrap();
                             },
@@ -171,6 +175,7 @@ impl Stream for Service {
                                 self.tx.lock().unwrap().send(Message {
                                     category: GOSSIP.to_string(),
                                     command: "".to_string(),
+                                    peer: Default::default(),
                                     value: value
                                 }).unwrap();
                             },

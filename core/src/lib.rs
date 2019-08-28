@@ -51,7 +51,7 @@ macro_rules! get_tx {
 
 extern {
     fn receive_gossip(topic_c_uchar: *mut c_uchar, topic_length: i16, data_c_uchar: *mut c_uchar, data_length: i16);
-    //fn receive_rpc(message_c_char: *mut c_uchar, length: i16);
+    fn receive_rpc(method_c_uchar: *mut c_uchar, method_length: i16, peer_c_uchar: *mut c_uchar, peer_length: usize, data_c_uchar: *mut c_uchar, data_length: i16);
 }
 
 #[no_mangle]
@@ -113,21 +113,15 @@ pub extern fn libp2p_start(args_c_char: *mut *mut c_char, length: isize) {
 pub extern fn libp2p_send_gossip(topic_c_uchar: *mut c_uchar, topic_length: usize, data_c_uchar: *mut c_uchar, data_length: usize) {
     let mut data = unsafe { std::slice::from_raw_parts_mut(data_c_uchar, data_length) };
     let topic = unsafe { std::str::from_utf8_unchecked(std::slice::from_raw_parts(topic_c_uchar, topic_length)) };
-    let gossip_data = Message {
-        category: GOSSIP.to_string(),
-        command: topic.to_string(), 
-        value: data.to_vec()
-    };
+    let gossip_data = Message::new(GOSSIP.to_string(),topic.to_string(),Default::default(),data.to_vec());
     get_tx!().as_mut().unwrap().send(gossip_data);
 }
 
 #[no_mangle]
-pub extern fn libp2p_send_rpc(message_c_uchar: *mut c_uchar, length: usize) {
-    // let mut message_bytes = unsafe { std::slice::from_raw_parts_mut(message_c_uchar, length) };
-
-    // let message = Message {
-    //     command: "RPC".to_string(), 
-    //     value: message_bytes.to_vec()
-    // };
-    // get_tx!().as_mut().unwrap().send(message);
+pub extern fn libp2p_send_rpc(method_c_uchar: *mut c_uchar, method_length: usize, peer_c_uchar: *mut c_uchar, peer_length: usize, data_c_uchar: *mut c_uchar, data_length: usize) {
+    let mut data = unsafe { std::slice::from_raw_parts_mut(data_c_uchar, data_length) };
+    let method = unsafe { std::str::from_utf8_unchecked(std::slice::from_raw_parts(method_c_uchar, method_length)) };
+    let peer = unsafe { std::str::from_utf8_unchecked(std::slice::from_raw_parts(peer_c_uchar, peer_length)) };
+    let rpc_data = Message::new(RPC.to_string(),method.to_string(),peer.to_string(),data.to_vec());
+    get_tx!().as_mut().unwrap().send(rpc_data);
 }
