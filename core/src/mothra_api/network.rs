@@ -1,7 +1,7 @@
 use super::error;
 use libp2p_wrapper::NetworkConfig;
 use libp2p_wrapper::Service as LibP2PService;
-use libp2p_wrapper::GossipData;
+use libp2p_wrapper::{Message};
 use libp2p_wrapper::{Libp2pEvent, PeerId};
 use libp2p_wrapper::{RPCEvent};
 use libp2p_wrapper::Topic;
@@ -22,7 +22,7 @@ pub struct Network {
 
 impl Network {
     pub fn new(
-        tx: sync::Sender<GossipData>,
+        tx: sync::Sender<Message>,
         config: &NetworkConfig,
         executor: &TaskExecutor,
         log: slog::Logger,

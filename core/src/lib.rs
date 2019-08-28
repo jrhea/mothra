@@ -13,22 +13,22 @@ use std::cell::RefMut;
 use cast::i16;
 use cast::i8;
 use slog::{info, debug, warn, o, Drain};
-use libp2p_wrapper::GossipData;
+use libp2p_wrapper::{Message,GOSSIP,RPC};
 use mothra_api::api;
 
 #[derive(Debug)]
 struct Global {
-    tx: RefCell<Option<Sender<GossipData>>>
+    tx: RefCell<Option<Sender<Message>>>
 }
 
 static mut GLOBAL: Global = Global{ tx:  RefCell::new(None) };
 
 impl Global {
-    fn set(&mut self, value: &RefCell<Option<Sender<GossipData>>>) {
+    fn set(&mut self, value: &RefCell<Option<Sender<Message>>>) {
         self.tx.swap(value);
     }
 
-    fn get(&self) -> RefMut<Option<Sender<GossipData>>> {
+    fn get(&self) -> RefMut<Option<Sender<Message>>> {
         self.tx.borrow_mut()
     }
 }
@@ -89,13 +89,15 @@ pub extern fn libp2p_start(args_c_char: *mut *mut c_char, length: isize) {
         loop{
             match rx2.recv(){
                 Ok(mut network_message) => {
-                    let topic_length = i16(network_message.topic.len()).unwrap();
-                    let topic = network_message.topic.into_bytes().as_mut_ptr();
-                    let data_length = i16(network_message.value.len()).unwrap();
-                    let data = network_message.value.as_mut_ptr();
-                    
-                    unsafe {
-                        receive_gossip(topic, topic_length, data, data_length);
+                    if network_message.category == GOSSIP.to_string(){
+                        let topic_length = i16(network_message.command.len()).unwrap();
+                        let topic = network_message.command.into_bytes().as_mut_ptr();
+                        let data_length = i16(network_message.value.len()).unwrap();
+                        let data = network_message.value.as_mut_ptr();
+                        
+                        unsafe {
+                            receive_gossip(topic, topic_length, data, data_length);
+                        }
                     }
                 }
                 Err(_) => {
@@ -111,8 +113,9 @@ pub extern fn libp2p_start(args_c_char: *mut *mut c_char, length: isize) {
 pub extern fn libp2p_send_gossip(topic_c_uchar: *mut c_uchar, topic_length: usize, data_c_uchar: *mut c_uchar, data_length: usize) {
     let mut data = unsafe { std::slice::from_raw_parts_mut(data_c_uchar, data_length) };
     let topic = unsafe { std::str::from_utf8_unchecked(std::slice::from_raw_parts(topic_c_uchar, topic_length)) };
-    let gossip_data = GossipData {
-        topic: topic.to_string(), 
+    let gossip_data = Message {
+        category: GOSSIP.to_string(),
+        command: topic.to_string(), 
         value: data.to_vec()
     };
     get_tx!().as_mut().unwrap().send(gossip_data);

@@ -4,9 +4,9 @@ include config.mk
 
 .PHONY:=c java c-bindings java-bindings c-examples java-examples clean
 
-c-mash: clean clean-bin c
+c-mash: clean c
 
-java-mash: clean clean-bin java
+java-mash: clean java
 
 c: clean-bin c-examples
 
@@ -46,9 +46,11 @@ java-bindings-egress:
 	cd $(BIND_DIR) && make $@
 
 clean-bin:
-	rm -rf $(OUT_DIR)/*
+	rm -f $(OUT_DIR)/*.*
+	rm -rf $(OUT_DIR)/net
 	
 clean:
+	rm -rf $(OUT_DIR)/*
 	cd $(CORE_DIR) && make $@
 	cd $(BIND_DIR) && make $@
 	cd $(EXAMPLES_DIR) && make $@

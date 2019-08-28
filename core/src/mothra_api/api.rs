@@ -12,7 +12,7 @@ use tokio::timer::Interval;
 use tokio_timer::clock::Clock;
 use futures::Future;
 use clap::{App, Arg, AppSettings};
-use libp2p_wrapper::{NetworkConfig, Topic, BEACON_ATTESTATION_TOPIC, BEACON_BLOCK_TOPIC,GossipData};
+use libp2p_wrapper::{NetworkConfig, Topic, BEACON_ATTESTATION_TOPIC, BEACON_BLOCK_TOPIC,Message,GOSSIP,RPC};
 use tokio::sync::mpsc;
 use super::network::{Network,NetworkMessage};
 
@@ -22,7 +22,7 @@ pub const HEARTBEAT_INTERVAL_SECONDS: u64 = 10;
 /// Create a warning log whenever the peer count is at or below this value.
 pub const WARN_PEER_COUNT: usize = 1;
 
-pub fn start(args: ArgMatches, local_tx: &sync::Sender<GossipData>,local_rx: &sync::Receiver<GossipData>, log: slog::Logger) {
+pub fn start(args: ArgMatches, local_tx: &sync::Sender<Message>,local_rx: &sync::Receiver<Message>, log: slog::Logger) {
     info!(log,"Initializing libP2P....");
     let runtime = Builder::new()
         .name_prefix("api-")
@@ -47,7 +47,9 @@ pub fn start(args: ArgMatches, local_tx: &sync::Sender<GossipData>,local_rx: &sy
         match local_rx.try_recv(){
             Ok(local_message) => {
                 //info!(log,  "in api.rs: sending message with topic {:?}",local_message.topic);
-                gossip(network_send.clone(),local_message.topic,local_message.value.to_vec(),log.new(o!("API" => "gossip()")));
+                if local_message.category == GOSSIP.to_string(){
+                    gossip(network_send.clone(),local_message.command,local_message.value.to_vec(),log.new(o!("API" => "gossip()")));
+                }
             }
             Err(_) => {
                 

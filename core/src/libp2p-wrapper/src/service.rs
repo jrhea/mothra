@@ -27,28 +27,19 @@ type Libp2pStream = Boxed<(PeerId, StreamMuxerBox), Error>;
 type Libp2pBehaviour = Behaviour<Substream<StreamMuxerBox>>;
 
 const NETWORK_KEY_FILENAME: &str = "key";
-pub struct GossipData {
-    pub topic: String,
-    pub value: Vec<u8>,
-}
+pub const GOSSIP: &str = "GOSSIP";
+pub const RPC: &str = "RPC";
 
-impl GossipData {
-    pub fn new (topic: String, value: Vec<u8>) -> GossipData {
-        GossipData {
-            topic: topic,
-            value: value
-        }
-    }
-}
-
-pub struct RPCData {
+pub struct Message {
+    pub category: String,
     pub command: String,
     pub value: Vec<u8>,
 }
 
-impl RPCData {
-    pub fn new (command: String, value: Vec<u8>) -> RPCData {
-        RPCData {
+impl Message {
+    pub fn new (category: String, command: String, value: Vec<u8>) -> Message {
+        Message {
+            category: category,
             command: command,
             value: value
         }
@@ -62,14 +53,14 @@ pub struct Service{
     pub swarm: Swarm<Libp2pStream, Libp2pBehaviour>,
     /// This node's PeerId.
     _local_peer_id: PeerId,
-    tx: std::sync::Mutex<sync::Sender<GossipData>>,
+    tx: std::sync::Mutex<sync::Sender<Message>>,
     /// The libp2p logger handle.
     pub log: slog::Logger,
 }
 
 impl Service {
 
-    pub fn new(config: NetworkConfig, tx: std::sync::Mutex<sync::Sender<GossipData>>, log: slog::Logger) -> error::Result<Self> {
+    pub fn new(config: NetworkConfig, tx: std::sync::Mutex<sync::Sender<Message>>, log: slog::Logger) -> error::Result<Self> {
         // load the private key from CLI flag, disk or generate a new one
         let local_private_key = load_private_key(&config, &log);
 
@@ -163,20 +154,23 @@ impl Stream for Service {
                         //info!(self.log, "Gossipsub message received"; "Message" => format!("{:?}", message));
                         match message.clone() {
                             PubsubMessage::Attestation(value) => {
-                                self.tx.lock().unwrap().send(GossipData {
-                                    topic: BEACON_ATTESTATION_TOPIC.to_string(),
+                                self.tx.lock().unwrap().send(Message {
+                                    category: GOSSIP.to_string(),
+                                    command: BEACON_ATTESTATION_TOPIC.to_string(),
                                     value: value
                                 }).unwrap();
                             },
                              PubsubMessage::Block(value) => {
-                                self.tx.lock().unwrap().send(GossipData {
-                                    topic: BEACON_BLOCK_TOPIC.to_string(),
+                                self.tx.lock().unwrap().send(Message {
+                                    category: GOSSIP.to_string(),
+                                    command: BEACON_BLOCK_TOPIC.to_string(),
                                     value: value
                                 }).unwrap();
                             },
                             PubsubMessage::Unknown(value) => {
-                                self.tx.lock().unwrap().send(GossipData {
-                                    topic: "GOSSIP".to_string(),
+                                self.tx.lock().unwrap().send(Message {
+                                    category: GOSSIP.to_string(),
+                                    command: "".to_string(),
                                     value: value
                                 }).unwrap();
                             },
