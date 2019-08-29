@@ -13,7 +13,7 @@ use std::cell::RefMut;
 use cast::i16;
 use cast::i8;
 use slog::{info, debug, warn, o, Drain};
-use libp2p_wrapper::{Message,GOSSIP,RPC};
+use libp2p_wrapper::{Message,GOSSIP,RPC,DISCOVERY};
 use mothra_api::api;
 
 #[derive(Debug)]
@@ -50,6 +50,7 @@ macro_rules! get_tx {
 }
 
 extern {
+    fn discovered_peer(peer_c_uchar: *mut c_uchar, peer_length: i16);
     fn receive_gossip(topic_c_uchar: *mut c_uchar, topic_length: i16, data_c_uchar: *mut c_uchar, data_length: i16);
     fn receive_rpc(method_c_uchar: *mut c_uchar, method_length: i16, peer_c_uchar: *mut c_uchar, peer_length: i16, data_c_uchar: *mut c_uchar, data_length: i16);
 }
@@ -98,7 +99,7 @@ pub extern fn libp2p_start(args_c_char: *mut *mut c_char, length: isize) {
                             receive_gossip(topic, topic_length, data, data_length);
                         }
                     } else if network_message.category == RPC.to_string(){
-                        debug!(log, "received RPC from peer: {:?}", network_message.peer);
+                        //debug!(log, "received RPC from peer: {:?}", network_message.peer);
                         let method_length = i16(network_message.command.len()).unwrap();
                         let method = network_message.command.into_bytes().as_mut_ptr();
                         let peer_length = i16(network_message.peer.len()).unwrap();
@@ -107,6 +108,13 @@ pub extern fn libp2p_start(args_c_char: *mut *mut c_char, length: isize) {
                         let data = network_message.value.as_mut_ptr();
                         unsafe {
                             receive_rpc(method, method_length, peer, peer_length, data, data_length);
+                        }
+                    } else if network_message.category == DISCOVERY.to_string(){
+                        //debug!(log, "discovered peer: {:?}", network_message.peer);
+                        let peer_length = i16(network_message.peer.len()).unwrap();
+                        let peer = network_message.peer.into_bytes().as_mut_ptr();
+                        unsafe {
+                            discovered_peer(peer, peer_length);
                         }
                     }
                 }

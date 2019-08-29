@@ -14,6 +14,7 @@ public class example {
         Runnable run = () -> {
             mothra.Init();
             mothra.Start(processed_args);
+            mothra.DiscoveryMessage = example::printDiscoveryMessage;
             mothra.ReceivedGossipMessage = example::printGossipMessage;
             mothra.ReceivedRPCMessage = example::printRPCMessage;
         };
@@ -35,6 +36,11 @@ public class example {
             }
         }
 
+    }
+
+    public static Boolean printDiscoveryMessage(String peer){
+        System.out.println("Java: Discovered a new peer " + peer);
+        return true;
     }
 
     public static Boolean printGossipMessage(String topic, byte[] message){

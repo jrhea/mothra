@@ -1,7 +1,7 @@
 use super::error;
 use libp2p_wrapper::NetworkConfig;
 use libp2p_wrapper::Service as LibP2PService;
-use libp2p_wrapper::{Message,RPC,GOSSIP};
+use libp2p_wrapper::{Message,RPC,GOSSIP,DISCOVERY};
 use libp2p_wrapper::{Libp2pEvent, PeerId};
 use libp2p_wrapper::{RPCEvent,RPCRequest};
 use libp2p_wrapper::Topic;
@@ -121,7 +121,7 @@ fn network_service(
             match libp2p_service.lock().poll() {
                 Ok(Async::Ready(Some(event))) => match event {
                     Libp2pEvent::RPC(_peer_id, rpc_event) => {
-                        debug!(log, "RPC Event: RPC message received: {:?}", rpc_event);
+                        //debug!(log, "RPC Event: RPC message received: {:?}", rpc_event);
                          match rpc_event {
                             RPCEvent::Request(_, request) => {
                                 match request {
@@ -144,7 +144,12 @@ fn network_service(
                         }
                     }
                     Libp2pEvent::PeerDialed(_peer_id) => {
-                        
+                        tx.lock().unwrap().send(Message {
+                            category: DISCOVERY.to_string(),
+                            command: Default::default(),
+                            peer: _peer_id.to_string(),
+                            value: Default::default()
+                        }).unwrap();
                     }
                     Libp2pEvent::PeerDisconnected(peer_id) => {
                         debug!(log, "Peer Disconnected: {:?}", peer_id);

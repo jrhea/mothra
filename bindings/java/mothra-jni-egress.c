@@ -47,7 +47,6 @@ JNIEXPORT void JNICALL Java_net_p2p_mothra_SendGossip (JNIEnv *jenv, jclass jcls
 }
 
 JNIEXPORT void JNICALL Java_net_p2p_mothra_SendRPC (JNIEnv *jenv, jclass jcls, jbyteArray jmethod, jbyteArray jpeer, jbyteArray jdata){
-    printf("Java_net_p2p_mothra_SendRPC 1\n");
     int data_length = (*jenv)->GetArrayLength(jenv, jdata);
     int method_length = (*jenv)->GetArrayLength(jenv, jmethod);
     int peer_length = (*jenv)->GetArrayLength(jenv, jpeer);
@@ -67,7 +66,6 @@ JNIEXPORT void JNICALL Java_net_p2p_mothra_SendRPC (JNIEnv *jenv, jclass jcls, j
         method = (*jenv)->GetByteArrayElements(jenv,jmethod,&isCopy);
         if (!method) return ;
     }
-    printf("Before calling: libp2p_send_rpc\n");
     libp2p_send_rpc(method,method_length,peer,peer_length,data,data_length);
     if (data) (*jenv)->ReleaseByteArrayElements(jenv, jdata, data, 0);
     if (peer) (*jenv)->ReleaseByteArrayElements(jenv, jpeer, peer, 0);

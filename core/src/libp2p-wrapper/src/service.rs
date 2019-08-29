@@ -29,6 +29,7 @@ type Libp2pBehaviour = Behaviour<Substream<StreamMuxerBox>>;
 const NETWORK_KEY_FILENAME: &str = "key";
 pub const GOSSIP: &str = "GOSSIP";
 pub const RPC: &str = "RPC";
+pub const DISCOVERY: &str = "DISCOVERY";
 
 pub struct Message {
     pub category: String,
@@ -153,7 +154,7 @@ impl Stream for Service {
                         topics,
                         message,
                     } => {
-                        //info!(self.log, "Gossipsub message received"; "Message" => format!("{:?}", message));
+                        //debug!(self.log, "Gossipsub message received"; "Message" => format!("{:?}", message));
                         match message.clone() {
                             PubsubMessage::Attestation(value) => {
                                 self.tx.lock().unwrap().send(Message {

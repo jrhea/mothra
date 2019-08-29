@@ -12,6 +12,33 @@ JNIEXPORT void JNICALL Java_net_p2p_mothra_Init(JNIEnv* jenv, jclass jcls)
    assert (rs == JNI_OK);
 }
 
+void discovered_peer(unsigned char* peer, int peer_length) {
+    JNIEnv *jenv;
+    jint rs = (*jvm)->AttachCurrentThread(jvm, (void**)&jenv, NULL);
+    assert (rs == JNI_OK);
+    if(jenv != NULL) {
+        jclass mothra_class;
+        jmethodID discoveredpeer_method;
+        jbyteArray jpeer;
+          mothra_class = (*jenv)->FindClass(jenv, "net/p2p/mothra");
+        if(!mothra_class){
+            detach(jenv);
+        }
+        //Put the native unsigned chars in the java byte array
+        jpeer = (*jenv)->NewByteArray(jenv, peer_length);
+        (*jenv)->SetByteArrayRegion(jenv, jpeer, 0, peer_length, (jbyte *)peer);
+        if(!jpeer){
+            detach(jenv);
+        }
+        discoveredpeer_method = (*jenv)->GetStaticMethodID(jenv, mothra_class, "DiscoveredPeer", "([B)V");
+        if(!discoveredpeer_method){
+            printf("JNI Error: GetStaticMethodID was unable to find method: DiscoveredPeer with signature: ([B)V\n");
+            detach(jenv);
+        }
+        (*jenv)->CallStaticVoidMethod(jenv, mothra_class, discoveredpeer_method, jpeer);
+    }
+}
+
 void receive_gossip(unsigned char* topic, int topic_length, unsigned char* data, int data_length) {
     JNIEnv *jenv;
     jint rs = (*jvm)->AttachCurrentThread(jvm, (void**)&jenv, NULL);
@@ -43,7 +70,6 @@ void receive_gossip(unsigned char* topic, int topic_length, unsigned char* data,
 }
 
 void receive_rpc(unsigned char* method, int method_length, unsigned char* peer, int peer_length, unsigned char* data, int data_length) {
-    printf("In receive_rpc 1\n");
     JNIEnv *jenv;
     jint rs = (*jvm)->AttachCurrentThread(jvm, (void**)&jenv, NULL);
     assert (rs == JNI_OK);

@@ -8,6 +8,7 @@ extern "C" {
 
 JNIEXPORT void JNICALL Java_net_p2p_mothra_Init(JNIEnv*,jclass);
 
+void discovered_peer(unsigned char*, int);
 void receive_gossip(unsigned char*, int, unsigned char*, int);
 void receive_rpc(unsigned char*, int, unsigned char*, int, unsigned char*, int);
 

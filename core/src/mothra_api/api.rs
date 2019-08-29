@@ -47,11 +47,11 @@ pub fn start(args: ArgMatches, local_tx: &sync::Sender<Message>,local_rx: &sync:
         match local_rx.try_recv(){
             Ok(local_message) => {
                 if local_message.category == GOSSIP.to_string(){
-                    info!(log,  "in api.rs: sending gossip with topic {:?}",local_message.command);
+                    //info!(log,  "in api.rs: sending gossip with topic {:?}",local_message.command);
                     gossip(network_send.clone(),local_message.command,local_message.value.to_vec(),log.new(o!("API" => "gossip()")));
                 }
                 else if local_message.category == RPC.to_string(){
-                    info!(log,  "in api.rs: sending rpc_method of type {:?}",local_message.command);
+                    //info!(log,  "in api.rs: sending rpc_method of type {:?}",local_message.command);
                     rpc(network_send.clone(),local_message.command,local_message.peer,local_message.value.to_vec(),log.new(o!("API" => "rpc()")));
                 }
             }
