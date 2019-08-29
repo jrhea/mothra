@@ -12,7 +12,7 @@ JNIEXPORT void JNICALL Java_net_p2p_mothra_Init(JNIEnv* jenv, jclass jcls)
    assert (rs == JNI_OK);
 }
 
-void discovered_peer(unsigned char* peer, int peer_length) {
+void discovered_peer(const unsigned char* peer, int peer_length) {
     JNIEnv *jenv;
     jint rs = (*jvm)->AttachCurrentThread(jvm, (void**)&jenv, NULL);
     assert (rs == JNI_OK);
@@ -39,7 +39,7 @@ void discovered_peer(unsigned char* peer, int peer_length) {
     }
 }
 
-void receive_gossip(unsigned char* topic, int topic_length, unsigned char* data, int data_length) {
+void receive_gossip(const unsigned char* topic, int topic_length, unsigned char* data, int data_length) {
     JNIEnv *jenv;
     jint rs = (*jvm)->AttachCurrentThread(jvm, (void**)&jenv, NULL);
     assert (rs == JNI_OK);
@@ -69,7 +69,7 @@ void receive_gossip(unsigned char* topic, int topic_length, unsigned char* data,
     }
 }
 
-void receive_rpc(unsigned char* method, int method_length, unsigned char* peer, int peer_length, unsigned char* data, int data_length) {
+void receive_rpc(const unsigned char* method, int method_length, const unsigned char* peer, int peer_length, unsigned char* data, int data_length) {
     JNIEnv *jenv;
     jint rs = (*jvm)->AttachCurrentThread(jvm, (void**)&jenv, NULL);
     assert (rs == JNI_OK);

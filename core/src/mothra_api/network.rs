@@ -128,7 +128,7 @@ fn network_service(
                                     RPCRequest::Message(data) => {
                                         tx.lock().unwrap().send(Message {
                                             category: RPC.to_string(),
-                                            command: Default::default(),
+                                            command: "HELLO".to_string(),      //TODO: need to fix this when i properly package the payload
                                             peer: _peer_id.to_string(),
                                             value: data
                                         }).unwrap();
