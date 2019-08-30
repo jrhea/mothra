@@ -12,7 +12,7 @@ use tokio::timer::Interval;
 use tokio_timer::clock::Clock;
 use futures::Future;
 use clap::{App, Arg, AppSettings};
-use libp2p_wrapper::{NetworkConfig, Topic, BEACON_ATTESTATION_TOPIC, BEACON_BLOCK_TOPIC,Message,GOSSIP,RPC,RPCRequest,RPCEvent,PeerId};
+use libp2p_wrapper::{NetworkConfig, Topic, BEACON_ATTESTATION_TOPIC, BEACON_BLOCK_TOPIC,Message,GOSSIP,RPC,RPCRequest,RPCResponse,RPCErrorResponse,RPCEvent,PeerId};
 use tokio::sync::mpsc;
 use super::network::{Network,NetworkMessage,OutgoingMessage};
 
@@ -51,8 +51,13 @@ pub fn start(args: ArgMatches, local_tx: &sync::Sender<Message>,local_rx: &sync:
                     gossip(network_send.clone(),local_message.command,local_message.value.to_vec(),log.new(o!("API" => "gossip()")));
                 }
                 else if local_message.category == RPC.to_string(){
-                    //debug!(log,  "in api.rs: sending rpc_method of type {:?}",local_message.command);
-                    rpc(network_send.clone(),local_message.command,local_message.peer,local_message.value.to_vec(),log.new(o!("API" => "rpc()")));
+                    if local_message.req_resp == 0 {
+                        debug!(log,  "in api.rs: sending request rpc_method of type {:?}",local_message.command);
+                        rpc_request(network_send.clone(),local_message.command,local_message.peer,local_message.value.to_vec(),log.new(o!("API" => "rpc()")));
+                    } else {
+                        debug!(log,  "in api.rs: sending response rpc_method of type {:?}",local_message.command);
+                        rpc_response(network_send.clone(),local_message.command,local_message.peer,local_message.value.to_vec(),log.new(o!("API" => "rpc()")));
+                    }
                 }
             }
             Err(_) => {
@@ -120,11 +125,27 @@ fn gossip( mut network_send: mpsc::UnboundedSender<NetworkMessage>, topic: Strin
                 });
 }
 
-fn rpc( mut network_send: mpsc::UnboundedSender<NetworkMessage>, method: String, peer: String, data: Vec<u8>, log: slog::Logger){
+fn rpc_request( mut network_send: mpsc::UnboundedSender<NetworkMessage>, method: String, peer: String, data: Vec<u8>, log: slog::Logger){
     // use 0 as the default request id, when an ID is not required.
     let request_id: usize = 0;
     let rpc_request: RPCRequest =  RPCRequest::Message(data);
     let rpc_event: RPCEvent = RPCEvent::Request(request_id, rpc_request);
+    let bytes = bs58::decode(peer.as_str()).into_vec().unwrap();
+    let peer_id = PeerId::from_bytes(bytes).map_err(|_|()).unwrap();
+    network_send.try_send(NetworkMessage::Send(peer_id,OutgoingMessage::RPC(rpc_event)))
+                .unwrap_or_else(|_| {
+                    warn!(
+                        log,
+                        "Could not send RPC message to the network service"
+                    )
+                });
+}
+
+fn rpc_response( mut network_send: mpsc::UnboundedSender<NetworkMessage>, method: String, peer: String, data: Vec<u8>, log: slog::Logger){
+    // use 0 as the default request id, when an ID is not required.
+    let request_id: usize = 0;
+    let rpc_response: RPCResponse =  RPCResponse::Message(data);
+    let rpc_event: RPCEvent = RPCEvent::Response(request_id,RPCErrorResponse::Success(rpc_response));
     let bytes = bs58::decode(peer.as_str()).into_vec().unwrap();
     let peer_id = PeerId::from_bytes(bytes).map_err(|_|()).unwrap();
     network_send.try_send(NetworkMessage::Send(peer_id,OutgoingMessage::RPC(rpc_event)))

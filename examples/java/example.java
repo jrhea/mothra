@@ -28,11 +28,13 @@ public class example {
                 String message = scanner.next();
                 mothra.SendGossip("beacon_block".getBytes(),message.getBytes());
             } else if(messageType.equals("RPC")){
+                System.out.print("Enter Req/Resp (0/1): ");
+                int req_resp = Integer.parseInt(scanner.next());
                 System.out.print("Enter a Peer: ");
                 String peer = scanner.next();
                 System.out.print("Enter a message: ");
                 String message = scanner.next();
-                mothra.SendRPC("HELLO".getBytes(),peer.getBytes(),message.getBytes());
+                mothra.SendRPC("HELLO".getBytes(),req_resp,peer.getBytes(),message.getBytes());
             }
         }
 
@@ -48,8 +50,8 @@ public class example {
         return true;
     }
 
-    public static Boolean printRPCMessage(String method, String peer, byte[] message){
-        System.out.println("Java: rpc method: " + method + " was invoked by peer: " + peer + " with message: " + new String(message));
+    public static Boolean printRPCMessage(String method, Integer req_resp, String peer, byte[] message){
+        System.out.println("Java: rpc method  " + method + ":" + req_resp + " was invoked by peer: " + peer + " with message: " + new String(message));
         return true;
     }
 }

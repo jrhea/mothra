@@ -20,7 +20,7 @@ pub use libp2p::{
     gossipsub::{GossipsubConfig, GossipsubConfigBuilder},
     PeerId,
 };
-pub use rpc::{RPCEvent, RPCRequest,RPCProtocol, RPC};
+pub use rpc::{RPCEvent,RPCRequest,RPCResponse,RPCErrorResponse,RPCProtocol,RPC};
 pub use service::Libp2pEvent;
 pub use service::Service;
 pub use service::Message;

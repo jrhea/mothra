@@ -34,15 +34,17 @@ pub const DISCOVERY: &str = "DISCOVERY";
 pub struct Message {
     pub category: String,
     pub command: String,
+    pub req_resp: u8,
     pub peer: String,
     pub value: Vec<u8>,
 }
 
 impl Message {
-    pub fn new (category: String, command: String, peer: String, value: Vec<u8>) -> Message {
+    pub fn new (category: String, command: String, req_resp: u8, peer: String, value: Vec<u8>) -> Message {
         Message {
             category: category,
             command: command,
+            req_resp: req_resp,
             peer: peer,
             value: value
         }
@@ -160,6 +162,7 @@ impl Stream for Service {
                                 self.tx.lock().unwrap().send(Message {
                                     category: GOSSIP.to_string(),
                                     command: BEACON_ATTESTATION_TOPIC.to_string(),
+                                    req_resp: Default::default(),
                                     peer: Default::default(),
                                     value: value
                                 }).unwrap();
@@ -168,6 +171,7 @@ impl Stream for Service {
                                 self.tx.lock().unwrap().send(Message {
                                     category: GOSSIP.to_string(),
                                     command: BEACON_BLOCK_TOPIC.to_string(),
+                                    req_resp: Default::default(),
                                     peer: Default::default(),
                                     value: value
                                 }).unwrap();
@@ -176,6 +180,7 @@ impl Stream for Service {
                                 self.tx.lock().unwrap().send(Message {
                                     category: GOSSIP.to_string(),
                                     command: "".to_string(),
+                                    req_resp: Default::default(),
                                     peer: Default::default(),
                                     value: value
                                 }).unwrap();
@@ -188,7 +193,7 @@ impl Stream for Service {
                         })));
                     }
                     BehaviourEvent::RPC(peer_id, event) => {
-                        //debug!(self.log,"Received RPC message from: {:?}", peer_id);
+                        debug!(self.log,"Received RPC message from: {:?}", peer_id);
                         return Ok(Async::Ready(Some(Libp2pEvent::RPC(peer_id, event))));
                     }
                     BehaviourEvent::PeerDialed(peer_id) => {

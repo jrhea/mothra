@@ -8,10 +8,12 @@ extern "C" {
 
 JNIEXPORT void JNICALL Java_net_p2p_mothra_Start(JNIEnv *, jclass, jobjectArray);
 JNIEXPORT void JNICALL Java_net_p2p_mothra_SendGossip(JNIEnv *, jclass, jbyteArray, jbyteArray);
+JNIEXPORT void JNICALL Java_net_p2p_mothra_SendRPC (JNIEnv *, jclass, jbyteArray, jint, jbyteArray, jbyteArray);
 
 extern void libp2p_start(char**, int);
 extern void libp2p_send_gossip(jbyte*, int, jbyte*, int);
-extern void libp2p_send_rpc(jbyte*, int, jbyte*, int, jbyte*, int);
+extern void libp2p_send_rpc_request(jbyte*, int, jbyte*, int, jbyte*, int);
+extern void libp2p_send_rpc_response(jbyte*, int, jbyte*, int, jbyte*, int);
 
 #ifdef __cplusplus
 }

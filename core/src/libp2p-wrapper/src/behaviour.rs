@@ -196,6 +196,7 @@ impl<TSubstream: AsyncRead + AsyncWrite> Behaviour<TSubstream> {
 
     /// Sends an RPC Request/Response via the RPC protocol.
     pub fn send_rpc(&mut self, peer_id: PeerId, rpc_event: RPCEvent) {
+        debug!(self.log, "in behaviour: Sending RPC Event: {:?}", rpc_event);
         self.serenity_rpc.send_rpc(peer_id, rpc_event);
     }
 

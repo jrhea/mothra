@@ -3,7 +3,7 @@ use libp2p_wrapper::NetworkConfig;
 use libp2p_wrapper::Service as LibP2PService;
 use libp2p_wrapper::{Message,RPC,GOSSIP,DISCOVERY};
 use libp2p_wrapper::{Libp2pEvent, PeerId};
-use libp2p_wrapper::{RPCEvent,RPCRequest};
+use libp2p_wrapper::{RPCEvent,RPCRequest,RPCResponse,RPCErrorResponse};
 use libp2p_wrapper::Topic;
 use futures::prelude::*;
 use futures::Stream;
@@ -98,7 +98,7 @@ fn network_service(
                 Ok(Async::Ready(Some(message))) => match message {
                     NetworkMessage::Send(peer_id, outgoing_message) => match outgoing_message {
                         OutgoingMessage::RPC(rpc_event) => {
-                            //debug!(log, "Sending RPC Event: {:?}", rpc_event);
+                            debug!(log, "Sending RPC Event: {:?}", rpc_event);
                             libp2p_service.lock().swarm.send_rpc(peer_id, rpc_event);
                         }
                     },
@@ -121,7 +121,7 @@ fn network_service(
             match libp2p_service.lock().poll() {
                 Ok(Async::Ready(Some(event))) => match event {
                     Libp2pEvent::RPC(_peer_id, rpc_event) => {
-                        //debug!(log, "RPC Event: RPC message received: {:?}", rpc_event);
+                        debug!(log, "RPC Event: RPC message received: {:?}", rpc_event);
                          match rpc_event {
                             RPCEvent::Request(_, request) => {
                                 match request {
@@ -129,14 +129,38 @@ fn network_service(
                                         tx.lock().unwrap().send(Message {
                                             category: RPC.to_string(),
                                             command: "HELLO".to_string(),      //TODO: need to fix this when i properly package the payload
+                                            req_resp: 0,
                                             peer: _peer_id.to_string(),
                                             value: data
                                         }).unwrap();
                                     }
                                 }
                             },
-                            RPCEvent::Response(id,_) => {
-                                // ?????
+                            RPCEvent::Response(id,err_response) => {
+                                match err_response {
+                                    RPCErrorResponse::InvalidRequest(error) => {
+                                        warn!(log, "Peer indicated invalid request";"peer_id" => format!("{:?}", _peer_id), "error" => error.as_string())
+                                    }
+                                    RPCErrorResponse::ServerError(error) => {
+                                        warn!(log, "Peer internal server error";"peer_id" => format!("{:?}", _peer_id), "error" => error.as_string())
+                                    }
+                                    RPCErrorResponse::Unknown(error) => {
+                                        warn!(log, "Unknown peer error";"peer" => format!("{:?}", _peer_id), "error" => error.as_string())
+                                    }
+                                    RPCErrorResponse::Success(response) => {
+                                        match response {
+                                            RPCResponse::Message(data) => {
+                                                tx.lock().unwrap().send(Message {
+                                                    category: RPC.to_string(),
+                                                    command: "HELLO".to_string(),      //TODO: need to fix this when i properly package the payload
+                                                    req_resp: 1,
+                                                    peer: _peer_id.to_string(),
+                                                    value: data
+                                                }).unwrap();
+                                            }
+                                        }
+                                    }
+                                }
                             },
                             RPCEvent::Error(_,_) =>{
                                 warn!(log,"RPCEvent Error");
@@ -147,6 +171,7 @@ fn network_service(
                         tx.lock().unwrap().send(Message {
                             category: DISCOVERY.to_string(),
                             command: Default::default(),
+                            req_resp: 0,
                             peer: _peer_id.to_string(),
                             value: Default::default()
                         }).unwrap();
