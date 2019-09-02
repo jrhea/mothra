@@ -1,14 +1,14 @@
 use super::error;
 use libp2p_wrapper::NetworkConfig;
 use libp2p_wrapper::Service as LibP2PService;
-use libp2p_wrapper::Message;
+use libp2p_wrapper::{Message,RPC,GOSSIP,DISCOVERY};
 use libp2p_wrapper::{Libp2pEvent, PeerId};
-use libp2p_wrapper::{RPCEvent};
+use libp2p_wrapper::{RPCEvent,RPCRequest};
 use libp2p_wrapper::Topic;
 use futures::prelude::*;
 use futures::Stream;
 use parking_lot::Mutex;
-use slog::{debug, info, o};
+use slog::{warn,debug, info, o};
 use std::sync::Arc;
 use std::sync::mpsc as sync;
 use tokio::runtime::TaskExecutor;
@@ -31,11 +31,12 @@ impl Network {
         let (network_send, network_recv) = mpsc::unbounded_channel::<NetworkMessage>();
         // launch libp2p Network
         let libp2p_log = log.new(o!("Network" => "Libp2p"));
-        let libp2p_service = Arc::new(Mutex::new(LibP2PService::new(config.clone(), std::sync::Mutex::new(tx), libp2p_log)?));
+        let libp2p_service = Arc::new(Mutex::new(LibP2PService::new(config.clone(), std::sync::Mutex::new(tx.clone()), libp2p_log)?));
         let libp2p_exit = spawn_service(
             libp2p_service.clone(),
             network_recv,
             network_send.clone(),
+            std::sync::Mutex::new(tx),
             executor,
             log,
         )?;
@@ -57,6 +58,7 @@ fn spawn_service(
     libp2p_service: Arc<Mutex<LibP2PService>>,
     network_recv: mpsc::UnboundedReceiver<NetworkMessage>,
     network_send: mpsc::UnboundedSender<NetworkMessage>,
+    tx: std::sync::Mutex<sync::Sender<Message>>,
     executor: &TaskExecutor,
     log: slog::Logger,
 ) -> error::Result<tokio::sync::oneshot::Sender<()>> {
@@ -68,6 +70,7 @@ fn spawn_service(
             libp2p_service,
             network_recv,
             network_send,
+            tx,
             log.clone(),
         )
         // allow for manual termination
@@ -85,6 +88,7 @@ fn network_service(
     libp2p_service: Arc<Mutex<LibP2PService>>,
     mut network_recv: mpsc::UnboundedReceiver<NetworkMessage>,
     _network_send: mpsc::UnboundedSender<NetworkMessage>,
+    tx: std::sync::Mutex<sync::Sender<Message>>,
     log: slog::Logger,
 ) -> impl futures::Future<Item = (), Error = libp2p_wrapper::error::Error> {
     futures::future::poll_fn(move || -> Result<_, libp2p_wrapper::error::Error> {
@@ -117,10 +121,35 @@ fn network_service(
             match libp2p_service.lock().poll() {
                 Ok(Async::Ready(Some(event))) => match event {
                     Libp2pEvent::RPC(_peer_id, rpc_event) => {
-                        debug!(log, "RPC Event: RPC message received: {:?}", rpc_event);
+                        //debug!(log, "RPC Event: RPC message received: {:?}", rpc_event);
+                         match rpc_event {
+                            RPCEvent::Request(_, request) => {
+                                match request {
+                                    RPCRequest::Message(data) => {
+                                        tx.lock().unwrap().send(Message {
+                                            category: RPC.to_string(),
+                                            command: "HELLO".to_string(),      //TODO: need to fix this when i properly package the payload
+                                            peer: _peer_id.to_string(),
+                                            value: data
+                                        }).unwrap();
+                                    }
+                                }
+                            },
+                            RPCEvent::Response(id,_) => {
+                                // ?????
+                            },
+                            RPCEvent::Error(_,_) =>{
+                                warn!(log,"RPCEvent Error");
+                            }
+                        }
                     }
                     Libp2pEvent::PeerDialed(_peer_id) => {
-                        
+                        tx.lock().unwrap().send(Message {
+                            category: DISCOVERY.to_string(),
+                            command: Default::default(),
+                            peer: _peer_id.to_string(),
+                            value: Default::default()
+                        }).unwrap();
                     }
                     Libp2pEvent::PeerDisconnected(peer_id) => {
                         debug!(log, "Peer Disconnected: {:?}", peer_id);

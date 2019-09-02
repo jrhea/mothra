@@ -14,20 +14,42 @@ public class example {
         Runnable run = () -> {
             mothra.Init();
             mothra.Start(processed_args);
-            mothra.ReceivedMessage = example::printMessage;
+            mothra.DiscoveryMessage = example::printDiscoveryMessage;
+            mothra.ReceivedGossipMessage = example::printGossipMessage;
+            mothra.ReceivedRPCMessage = example::printRPCMessage;
         };
         Executors.newSingleThreadExecutor().execute(run);
         Scanner scanner = new Scanner(System.in);
         while(true){
-            System.out.print("Enter a message to send: ");
-            String message = scanner.next();
-            mothra.SendGossip(message.getBytes());
+            System.out.print("Select RPC or GOSSIP: ");
+            String messageType = scanner.next();
+            if(messageType.equals("GOSSIP")){
+                System.out.print("Enter a message to GOSSIP: ");
+                String message = scanner.next();
+                mothra.SendGossip("beacon_block".getBytes(),message.getBytes());
+            } else if(messageType.equals("RPC")){
+                System.out.print("Enter a Peer: ");
+                String peer = scanner.next();
+                System.out.print("Enter a message: ");
+                String message = scanner.next();
+                mothra.SendRPC("HELLO".getBytes(),peer.getBytes(),message.getBytes());
+            }
         }
 
     }
 
-    public static Boolean printMessage(byte[] message){
-        System.out.println("Java: received this message from another peer - " + new String(message));
+    public static Boolean printDiscoveryMessage(String peer){
+        System.out.println("Java: Discovered a new peer " + peer);
+        return true;
+    }
+
+    public static Boolean printGossipMessage(String topic, byte[] message){
+        System.out.println("Java: received a gossip message. " + topic + ":" + new String(message));
+        return true;
+    }
+
+    public static Boolean printRPCMessage(String method, String peer, byte[] message){
+        System.out.println("Java: rpc method: " + method + " was invoked by peer: " + peer + " with message: " + new String(message));
         return true;
     }
 }

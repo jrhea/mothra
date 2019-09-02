@@ -27,19 +27,28 @@ type Libp2pStream = Boxed<(PeerId, StreamMuxerBox), Error>;
 type Libp2pBehaviour = Behaviour<Substream<StreamMuxerBox>>;
 
 const NETWORK_KEY_FILENAME: &str = "key";
+pub const GOSSIP: &str = "GOSSIP";
+pub const RPC: &str = "RPC";
+pub const DISCOVERY: &str = "DISCOVERY";
+
 pub struct Message {
+    pub category: String,
     pub command: String,
+    pub peer: String,
     pub value: Vec<u8>,
 }
 
 impl Message {
-    pub fn new (command: String, value: Vec<u8>) -> Message {
+    pub fn new (category: String, command: String, peer: String, value: Vec<u8>) -> Message {
         Message {
+            category: category,
             command: command,
+            peer: peer,
             value: value
         }
     }
 }
+
 /// The configuration and state of the libp2p components for the beacon node.
 pub struct Service{
     /// The libp2p Swarm handler.
@@ -145,23 +154,29 @@ impl Stream for Service {
                         topics,
                         message,
                     } => {
-                        //trace!(self.log, "Gossipsub message received"; "Message" => format!("{:?}", message));
+                        //debug!(self.log, "Gossipsub message received"; "Message" => format!("{:?}", message));
                         match message.clone() {
                             PubsubMessage::Attestation(value) => {
                                 self.tx.lock().unwrap().send(Message {
-                                    command: "GOSSIP".to_string(),
+                                    category: GOSSIP.to_string(),
+                                    command: BEACON_ATTESTATION_TOPIC.to_string(),
+                                    peer: Default::default(),
                                     value: value
                                 }).unwrap();
                             },
                              PubsubMessage::Block(value) => {
                                 self.tx.lock().unwrap().send(Message {
-                                    command: "GOSSIP".to_string(),
+                                    category: GOSSIP.to_string(),
+                                    command: BEACON_BLOCK_TOPIC.to_string(),
+                                    peer: Default::default(),
                                     value: value
                                 }).unwrap();
                             },
                             PubsubMessage::Unknown(value) => {
                                 self.tx.lock().unwrap().send(Message {
-                                    command: "GOSSIP".to_string(),
+                                    category: GOSSIP.to_string(),
+                                    command: "".to_string(),
+                                    peer: Default::default(),
                                     value: value
                                 }).unwrap();
                             },

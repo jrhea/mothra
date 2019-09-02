@@ -122,6 +122,21 @@ impl Config {
                 .collect::<Result<Vec<Enr>, _>>()?;
         }
 
+        if let Some(libp2p_addresses_str) = args.value_of("libp2p-addresses") {
+            self.libp2p_nodes = libp2p_addresses_str
+                .split(',')
+                .map(|multiaddr| {
+                    multiaddr
+                        .parse()
+                        .map_err(|_| format!("Invalid Multiaddr: {}", multiaddr))
+                })
+                .collect::<Result<Vec<Multiaddr>, _>>()?;
+        }
+
+        if let Some(topics_str) = args.value_of("topics") {
+            self.topics = topics_str.split(',').map(|s| s.into()).collect();
+        }
+
         if let Some(discovery_address_str) = args.value_of("discovery-address") {
             self.discovery_address = discovery_address_str
                 .parse()

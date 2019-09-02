@@ -37,9 +37,6 @@ impl UpgradeInfo for RPCProtocol {
     }
 }
 
-/// The raw protocol id sent over the wire.
-type RawProtocolId = Vec<u8>;
-
 /// Tracks the types in a protocol id.
 #[derive(Clone)]
 pub struct ProtocolId {

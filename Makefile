@@ -47,8 +47,10 @@ java-bindings-egress:
 
 clean-bin:
 	rm -f $(OUT_DIR)/*.*
-	rm -rf $(OUT_DIR)/p2p
+	rm -rf $(OUT_DIR)/net
+	
 clean:
+	rm -rf $(OUT_DIR)/*
 	cd $(CORE_DIR) && make $@
 	cd $(BIND_DIR) && make $@
 	cd $(EXAMPLES_DIR) && make $@

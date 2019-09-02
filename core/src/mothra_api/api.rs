@@ -12,12 +12,12 @@ use tokio::timer::Interval;
 use tokio_timer::clock::Clock;
 use futures::Future;
 use clap::{App, Arg, AppSettings};
-use libp2p_wrapper::{NetworkConfig, Topic, BEACON_ATTESTATION_TOPIC, BEACON_BLOCK_TOPIC,Message};
+use libp2p_wrapper::{NetworkConfig, Topic, BEACON_ATTESTATION_TOPIC, BEACON_BLOCK_TOPIC,Message,GOSSIP,RPC,RPCRequest,RPCEvent,PeerId};
 use tokio::sync::mpsc;
-use super::network::{Network,NetworkMessage};
+use super::network::{Network,NetworkMessage,OutgoingMessage};
 
 /// The interval between heartbeat events.
-pub const HEARTBEAT_INTERVAL_SECONDS: u64 = 15;
+pub const HEARTBEAT_INTERVAL_SECONDS: u64 = 10;
 
 /// Create a warning log whenever the peer count is at or below this value.
 pub const WARN_PEER_COUNT: usize = 1;
@@ -42,12 +42,17 @@ pub fn start(args: ArgMatches, local_tx: &sync::Sender<Message>,local_rx: &sync:
     ).unwrap();
     
     monitor(&network, executor, log.clone());
-    let dur = time::Duration::from_millis(100);
+    let dur = time::Duration::from_millis(50);
     loop {
         match local_rx.try_recv(){
             Ok(local_message) => {
-                if local_message.command == "GOSSIP".to_string() {
-                    gossip(network_send.clone(), local_message.value.to_vec(),log.new(o!("API" => "gossip()")));
+                if local_message.category == GOSSIP.to_string(){
+                    //info!(log,  "in api.rs: sending gossip with topic {:?}",local_message.command);
+                    gossip(network_send.clone(),local_message.command,local_message.value.to_vec(),log.new(o!("API" => "gossip()")));
+                }
+                else if local_message.category == RPC.to_string(){
+                    //debug!(log,  "in api.rs: sending rpc_method of type {:?}",local_message.command);
+                    rpc(network_send.clone(),local_message.command,local_message.peer,local_message.value.to_vec(),log.new(o!("API" => "rpc()")));
                 }
             }
             Err(_) => {
@@ -56,6 +61,7 @@ pub fn start(args: ArgMatches, local_tx: &sync::Sender<Message>,local_rx: &sync:
         }
         match network_rx.try_recv(){
             Ok(network_message) => {
+                //debug!(log,  "in api.rs: receiving message {:?} {:?}",network_message.category,network_message.command);
                 local_tx.send(network_message).unwrap();
             }
             Err(_) => {
@@ -102,17 +108,32 @@ fn monitor(
 
 }
 
-fn gossip( mut network_send: mpsc::UnboundedSender<NetworkMessage>, message: Vec<u8>, log: slog::Logger){
-    let topic = Topic::new(BEACON_BLOCK_TOPIC.to_string());
+fn gossip( mut network_send: mpsc::UnboundedSender<NetworkMessage>, topic: String, data: Vec<u8>, log: slog::Logger){
     network_send.try_send(NetworkMessage::Publish {
-        topics: vec![topic],
-        message: message,
-    }).unwrap_or_else(|_| {
-        warn!(
-            log,
-            "Could not send gossip message."
-        )
-    });
+                topics: vec![Topic::new(topic)],
+                message: data,})
+                .unwrap_or_else(|_| {
+                    warn!(
+                        log,
+                        "Could not send gossip message."
+                    )
+                });
+}
+
+fn rpc( mut network_send: mpsc::UnboundedSender<NetworkMessage>, method: String, peer: String, data: Vec<u8>, log: slog::Logger){
+    // use 0 as the default request id, when an ID is not required.
+    let request_id: usize = 0;
+    let rpc_request: RPCRequest =  RPCRequest::Message(data);
+    let rpc_event: RPCEvent = RPCEvent::Request(request_id, rpc_request);
+    let bytes = bs58::decode(peer.as_str()).into_vec().unwrap();
+    let peer_id = PeerId::from_bytes(bytes).map_err(|_|()).unwrap();
+    network_send.try_send(NetworkMessage::Send(peer_id,OutgoingMessage::RPC(rpc_event)))
+                .unwrap_or_else(|_| {
+                    warn!(
+                        log,
+                        "Could not send RPC message to the network service"
+                    )
+                });
 }
 
 pub fn config(args: Vec<String>) -> ArgMatches<'static> {
@@ -173,6 +194,20 @@ pub fn config(args: Vec<String>) -> ArgMatches<'static> {
             .help("The IP address to broadcast to other peers on how to reach this node.")
             .takes_value(true),
     )
+    .arg(
+        Arg::with_name("topics")
+            .long("topics")
+            .value_name("STRING")
+            .help("One or more comma-delimited gossipsub topic strings to subscribe to.")
+            .takes_value(true),
+    )
+        .arg(
+        Arg::with_name("libp2p-addresses")
+            .long("libp2p-addresses")
+            .value_name("MULTIADDR")
+            .help("One or more comma-delimited multiaddrs to manually connect to a libp2p peer without an ENR.")
+            .takes_value(true),
+        )
     .arg(
         Arg::with_name("debug-level")
             .long("debug-level")
