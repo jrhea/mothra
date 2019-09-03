@@ -31,6 +31,7 @@ impl RPCErrorResponse {
 
     /// Tells the codec whether to decode as an RPCResponse or an error.
     pub fn is_response(response_code: u8) -> bool {
+        
         match response_code {
             0 => true,
             _ => false,

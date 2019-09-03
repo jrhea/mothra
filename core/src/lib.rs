@@ -52,7 +52,7 @@ macro_rules! get_tx {
 extern {
     fn discovered_peer(peer_c_uchar: *const c_uchar, peer_length: i16);
     fn receive_gossip(topic_c_uchar: *const c_uchar, topic_length: i16, data_c_uchar: *mut c_uchar, data_length: i16);
-    fn receive_rpc(method_c_uchar: *const c_uchar, method_length: i16, peer_c_uchar: *const c_uchar, peer_length: i16, data_c_uchar: *mut c_uchar, data_length: i16);
+    fn receive_rpc(method_c_uchar: *const c_uchar, method_length: i16, req_resp: i16, peer_c_uchar: *const c_uchar, peer_length: i16, data_c_uchar: *mut c_uchar, data_length: i16);
 }
 
 #[no_mangle]
@@ -91,6 +91,7 @@ pub extern fn libp2p_start(args_c_char: *mut *mut c_char, length: isize) {
             match rx2.recv(){
                 Ok(mut network_message) => {
                     if network_message.category == GOSSIP.to_string(){
+                        //debug!(log, "received GOSSIP from peer: {:?} method: {:?} req/resp: {:?}", network_message.peer,network_message.command,network_message.req_resp);
                         let topic_length = i16(network_message.command.len()).unwrap();
                         let topic = network_message.command.as_ptr();
                         let data_length = i16(network_message.value.len()).unwrap();
@@ -99,15 +100,16 @@ pub extern fn libp2p_start(args_c_char: *mut *mut c_char, length: isize) {
                             receive_gossip(topic, topic_length, data, data_length);
                         }
                     } else if network_message.category == RPC.to_string(){
-                        //debug!(log, "received RPC from peer: {:?} method: {:?}", network_message.peer,network_message.command);
+                        //debug!(log, "received RPC from peer: {:?} method: {:?} req/resp: {:?}", network_message.peer,network_message.command,network_message.req_resp);
                         let method_length = i16(network_message.command.len()).unwrap();
                         let method =  network_message.command.as_ptr();
+                        let req_resp = i16(network_message.req_resp);
                         let peer_length = i16(network_message.peer.len()).unwrap();
                         let peer = network_message.peer.as_ptr();
                         let data_length = i16(network_message.value.len()).unwrap();
                         let data = network_message.value.as_mut_ptr();
                         unsafe {
-                            receive_rpc(method, method_length, peer, peer_length, data, data_length);
+                            receive_rpc(method, method_length, req_resp, peer, peer_length, data, data_length);
                         }
                     } else if network_message.category == DISCOVERY.to_string(){
                         //debug!(log, "discovered peer: {:?}", network_message.peer);
@@ -129,17 +131,28 @@ pub extern fn libp2p_start(args_c_char: *mut *mut c_char, length: isize) {
 
 #[no_mangle]
 pub extern fn libp2p_send_gossip(topic_c_uchar: *mut c_uchar, topic_length: usize, data_c_uchar: *mut c_uchar, data_length: usize) {
-    let mut data = unsafe { std::slice::from_raw_parts_mut(data_c_uchar, data_length) };
     let topic = unsafe { std::str::from_utf8_unchecked(std::slice::from_raw_parts(topic_c_uchar, topic_length)) };
-    let gossip_data = Message::new(GOSSIP.to_string(),topic.to_string(),Default::default(),data.to_vec());
+    let mut data = unsafe { std::slice::from_raw_parts_mut(data_c_uchar, data_length) };
+    let gossip_data = Message::new(GOSSIP.to_string(),topic.to_string(),Default::default(),Default::default(),data.to_vec());
     get_tx!().as_mut().unwrap().send(gossip_data);
 }
 
 #[no_mangle]
-pub extern fn libp2p_send_rpc(method_c_uchar: *mut c_uchar, method_length: usize, peer_c_uchar: *mut c_uchar, peer_length: usize, data_c_uchar: *mut c_uchar, data_length: usize) {
-    let mut data = unsafe { std::slice::from_raw_parts_mut(data_c_uchar, data_length) };
+pub extern fn libp2p_send_rpc_request(method_c_uchar: *mut c_uchar, method_length: usize, peer_c_uchar: *mut c_uchar, peer_length: usize, data_c_uchar: *mut c_uchar, data_length: usize) {
+    //std::println!("In libp2p_send_rpc_request");
     let method = unsafe { std::str::from_utf8_unchecked(std::slice::from_raw_parts(method_c_uchar, method_length)) };
     let peer = unsafe { std::str::from_utf8_unchecked(std::slice::from_raw_parts(peer_c_uchar, peer_length)) };
-    let rpc_data = Message::new(RPC.to_string(),method.to_string(),peer.to_string(),data.to_vec());
+    let mut data = unsafe { std::slice::from_raw_parts_mut(data_c_uchar, data_length) };
+    let rpc_data = Message::new(RPC.to_string(),method.to_string(),0,peer.to_string(),data.to_vec());
+    get_tx!().as_mut().unwrap().send(rpc_data);
+}
+
+#[no_mangle]
+pub extern fn libp2p_send_rpc_response(method_c_uchar: *mut c_uchar, method_length: usize, peer_c_uchar: *mut c_uchar, peer_length: usize, data_c_uchar: *mut c_uchar, data_length: usize) {
+    //std::println!("In libp2p_send_rpc_response");
+    let method = unsafe { std::str::from_utf8_unchecked(std::slice::from_raw_parts(method_c_uchar, method_length)) };
+    let peer = unsafe { std::str::from_utf8_unchecked(std::slice::from_raw_parts(peer_c_uchar, peer_length)) };
+    let mut data = unsafe { std::slice::from_raw_parts_mut(data_c_uchar, data_length) };
+    let rpc_data = Message::new(RPC.to_string(),method.to_string(),1,peer.to_string(),data.to_vec());
     get_tx!().as_mut().unwrap().send(rpc_data);
 }

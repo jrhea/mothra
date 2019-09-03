@@ -14,7 +14,7 @@ use std::time::{Duration, Instant};
 use tokio_io::{AsyncRead, AsyncWrite};
 
 /// The time (in seconds) before a substream that is awaiting a response times out.
-pub const RESPONSE_TIMEOUT: u64 = 9;
+pub const RESPONSE_TIMEOUT: u64 = 10;
 
 /// Implementation of `ProtocolsHandler` for the RPC protocol.
 pub struct RPCHandler<TSubstream>
@@ -204,6 +204,18 @@ where
         } else {
             self.keep_alive = KeepAlive::Yes;
         }
+        // add the stream to substreams if we expect a response, otherwise drop the stream.
+        if let RPCEvent::Request(id, req) = rpc_event {
+            if req.expect_response() {
+                let awaiting_stream = SubstreamState::RequestPendingResponse {
+                    substream: out,
+                    rpc_event: RPCEvent::Request(id, req),
+                    timeout: Instant::now() + Duration::from_secs(RESPONSE_TIMEOUT),
+                };
+
+                self.substreams.push(awaiting_stream);
+            }
+        }
     }
 
     // Note: If the substream has closed due to inactivity, or the substream is in the
@@ -213,6 +225,7 @@ where
         match rpc_event {
             RPCEvent::Request(_, _) => self.send_request(rpc_event),
             RPCEvent::Response(rpc_id, res) => {
+                std::println!("handler.rs {:?}",res);
                 // check if the stream matching the response still exists
                 if let Some(waiting_stream) = self.waiting_substreams.remove(&rpc_id) {
                     // only send one response per stream. This must be in the waiting state.
@@ -221,7 +234,7 @@ where
                     });
                 }
             }
-            RPCEvent::Error(_, _) => {}
+            RPCEvent::Error(_, _) => { std::println!("handler.rs ERROR")}
         }
     }
 
@@ -250,7 +263,11 @@ where
         Self::Error,
     > {
         if let Some(err) = self.pending_error.take() {
-            return Err(err);
+            // Returning an error here will result in dropping any peer that doesn't support any of
+            // the RPC protocols. For our immediate purposes we permit this and simply log that an
+            // upgrade was not supported.
+            // TODO: Add a logger to the handler for trace output.
+            dbg!(&err);
         }
 
         // return any events that need to be reported
@@ -291,10 +308,14 @@ where
                 } => match substream.poll() {
                     Ok(Async::Ready(response)) => {
                         if let Some(response) = response {
+                            std::println!("handler.rs: a response?");
                             return Ok(Async::Ready(ProtocolsHandlerEvent::Custom(
-                                build_response(rpc_event, response),
+                                //TODO: update
+                                //build_response(rpc_event, response),
+                                RPCEvent::Response(rpc_event.id(), response),
                             )));
                         } else {
+                            std::println!("handler.rs: stream closed early");
                             // stream closed early
                             return Ok(Async::Ready(ProtocolsHandlerEvent::Custom(
                                 RPCEvent::Error(

@@ -34,15 +34,17 @@ pub const DISCOVERY: &str = "DISCOVERY";
 pub struct Message {
     pub category: String,
     pub command: String,
+    pub req_resp: u8,
     pub peer: String,
     pub value: Vec<u8>,
 }
 
 impl Message {
-    pub fn new (category: String, command: String, peer: String, value: Vec<u8>) -> Message {
+    pub fn new (category: String, command: String, req_resp: u8, peer: String, value: Vec<u8>) -> Message {
         Message {
             category: category,
             command: command,
+            req_resp: req_resp,
             peer: peer,
             value: value
         }
@@ -149,38 +151,29 @@ impl Stream for Service {
             match self.swarm.poll() {
                 //Behaviour events
                 Ok(Async::Ready(Some(event))) => match event {
-                    BehaviourEvent::GossipMessage {
+                    BehaviourEvent::PubsubMessage {
                         source,
                         topics,
                         message,
                     } => {
-                        //debug!(self.log, "Gossipsub message received"; "Message" => format!("{:?}", message));
-                        match message.clone() {
-                            PubsubMessage::Attestation(value) => {
-                                self.tx.lock().unwrap().send(Message {
-                                    category: GOSSIP.to_string(),
-                                    command: BEACON_ATTESTATION_TOPIC.to_string(),
-                                    peer: Default::default(),
-                                    value: value
-                                }).unwrap();
-                            },
-                             PubsubMessage::Block(value) => {
-                                self.tx.lock().unwrap().send(Message {
-                                    category: GOSSIP.to_string(),
-                                    command: BEACON_BLOCK_TOPIC.to_string(),
-                                    peer: Default::default(),
-                                    value: value
-                                }).unwrap();
-                            },
-                            PubsubMessage::Unknown(value) => {
-                                self.tx.lock().unwrap().send(Message {
-                                    category: GOSSIP.to_string(),
-                                    command: "".to_string(),
-                                    peer: Default::default(),
-                                    value: value
-                                }).unwrap();
-                            },
-                        }
+                        //debug!(self.log, "Gossipsub message received"; "Message" => format!("{:?}", topics[0]));
+                        if topics[0].to_string() == BEACON_BLOCK_TOPIC.to_string() {
+                            self.tx.lock().unwrap().send(Message {
+                                category: GOSSIP.to_string(),
+                                command: BEACON_BLOCK_TOPIC.to_string(),
+                                req_resp: Default::default(),
+                                peer: Default::default(),
+                                value: message.clone()
+                            }).unwrap();
+                        } else if topics[0].to_string() == BEACON_ATTESTATION_TOPIC.to_string() {
+                            self.tx.lock().unwrap().send(Message {
+                                category: GOSSIP.to_string(),
+                                command: BEACON_ATTESTATION_TOPIC.to_string(),
+                                req_resp: Default::default(),
+                                peer: Default::default(),
+                                value: message.clone()
+                            }).unwrap();
+                        } 
                         return Ok(Async::Ready(Some(Libp2pEvent::PubsubMessage {
                             source,
                             topics,
@@ -251,7 +244,7 @@ pub enum Libp2pEvent {
     PubsubMessage {
         source: PeerId,
         topics: Vec<TopicHash>,
-        message: PubsubMessage,
+        message:  Vec<u8>,
     },
 }
 

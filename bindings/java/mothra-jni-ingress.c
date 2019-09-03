@@ -69,7 +69,7 @@ void receive_gossip(const unsigned char* topic, int topic_length, unsigned char*
     }
 }
 
-void receive_rpc(const unsigned char* method, int method_length, const unsigned char* peer, int peer_length, unsigned char* data, int data_length) {
+void receive_rpc(const unsigned char* method, int method_length, int req_resp, const unsigned char* peer, int peer_length, unsigned char* data, int data_length) {
     JNIEnv *jenv;
     jint rs = (*jvm)->AttachCurrentThread(jvm, (void**)&jenv, NULL);
     assert (rs == JNI_OK);
@@ -77,6 +77,7 @@ void receive_rpc(const unsigned char* method, int method_length, const unsigned 
         jclass mothra_class;
         jmethodID receiverpc_method;
         jbyteArray jmethod;
+        jint jreq_resp;
         jbyteArray jpeer;
         jbyteArray jdata;
         mothra_class = (*jenv)->FindClass(jenv, "net/p2p/mothra");
@@ -85,6 +86,7 @@ void receive_rpc(const unsigned char* method, int method_length, const unsigned 
         }
         //Put the native unsigned chars in the java byte array
         jmethod = (*jenv)->NewByteArray(jenv, method_length);
+        jreq_resp = req_resp;
         jpeer = (*jenv)->NewByteArray(jenv, peer_length);
         jdata = (*jenv)->NewByteArray(jenv, data_length);
         (*jenv)->SetByteArrayRegion(jenv, jmethod, 0, method_length, (jbyte *)method);
@@ -93,12 +95,12 @@ void receive_rpc(const unsigned char* method, int method_length, const unsigned 
         if(!jdata || !jpeer|| !jmethod){
             detach(jenv);
         }
-        receiverpc_method = (*jenv)->GetStaticMethodID(jenv, mothra_class, "ReceiveRPC", "([B[B[B)V");
+        receiverpc_method = (*jenv)->GetStaticMethodID(jenv, mothra_class, "ReceiveRPC", "([BI[B[B)V");
         if(!receiverpc_method){
-            printf("JNI Error: GetStaticMethodID was unable to find method: ReceiveRPC with signature: ([B[B[B)V\n");
+            printf("JNI Error: GetStaticMethodID was unable to find method: ReceiveRPC with signature: ([BI[B[B)V\n");
             detach(jenv);
         }
-        (*jenv)->CallStaticVoidMethod(jenv, mothra_class, receiverpc_method, jmethod, jpeer, jdata);
+        (*jenv)->CallStaticVoidMethod(jenv, mothra_class, receiverpc_method, jmethod, jreq_resp, jpeer, jdata);
     }
 }
 

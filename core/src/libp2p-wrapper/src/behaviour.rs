@@ -87,12 +87,12 @@ impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<GossipsubE
             GossipsubEvent::Message(gs_msg) => {
                 //debug!(self.log, "Received GossipEvent"; "msg" => format!("{:?}", gs_msg));
 
-                let msg = PubsubMessage::from_topics(&gs_msg.topics, gs_msg.data);
+                //let msg = PubsubMessage::from_topics(&gs_msg.topics, gs_msg.data);
 
-                self.events.push(BehaviourEvent::GossipMessage {
+                self.events.push(BehaviourEvent::PubsubMessage {
                     source: gs_msg.source,
                     topics: gs_msg.topics,
-                    message: msg,
+                    message: gs_msg.data
                 });
             }
             GossipsubEvent::Subscribed { .. } => {}
@@ -214,10 +214,10 @@ pub enum BehaviourEvent {
     RPC(PeerId, RPCEvent),
     PeerDialed(PeerId),
     PeerDisconnected(PeerId),
-    GossipMessage {
+    PubsubMessage {
         source: PeerId,
         topics: Vec<TopicHash>,
-        message: PubsubMessage,
+        message: Vec<u8>,
     },
 }
 
@@ -230,23 +230,4 @@ pub enum PubsubMessage {
     Attestation(Vec<u8>),
     /// Gossipsub message from an unknown topic.
     Unknown(Vec<u8>),
-}
-
-impl PubsubMessage {
-    /* Note: This is assuming we are not hashing topics. If we choose to hash topics, these will
-     * need to be modified.
-     *
-     * Also note that a message can be associated with many topics. As soon as one of the topics is
-     * known we match. If none of the topics are known we return an unknown state.
-     */
-    fn from_topics(topics: &Vec<TopicHash>, data: Vec<u8>) -> Self {
-        for topic in topics {
-            match topic.as_str() {
-                BEACON_BLOCK_TOPIC => return PubsubMessage::Block(data),
-                BEACON_ATTESTATION_TOPIC => return PubsubMessage::Attestation(data),
-                _ => {}
-            }
-        }
-        PubsubMessage::Unknown(data)
-    }
 }

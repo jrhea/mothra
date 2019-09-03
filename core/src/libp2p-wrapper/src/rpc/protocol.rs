@@ -160,6 +160,13 @@ impl RPCRequest {
             ],
         }
     }
+
+     /// This specifies whether a stream should remain open and await a response, given a request.
+    pub fn expect_response(&self) -> bool {
+        match self {
+            RPCRequest::Message(_) => true,
+        }
+    }
 }
 
 /* RPC Response type - used for outbound upgrades */
