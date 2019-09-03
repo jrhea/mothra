@@ -91,6 +91,7 @@ pub extern fn libp2p_start(args_c_char: *mut *mut c_char, length: isize) {
             match rx2.recv(){
                 Ok(mut network_message) => {
                     if network_message.category == GOSSIP.to_string(){
+                        //debug!(log, "received GOSSIP from peer: {:?} method: {:?} req/resp: {:?}", network_message.peer,network_message.command,network_message.req_resp);
                         let topic_length = i16(network_message.command.len()).unwrap();
                         let topic = network_message.command.as_ptr();
                         let data_length = i16(network_message.value.len()).unwrap();
@@ -99,7 +100,7 @@ pub extern fn libp2p_start(args_c_char: *mut *mut c_char, length: isize) {
                             receive_gossip(topic, topic_length, data, data_length);
                         }
                     } else if network_message.category == RPC.to_string(){
-                        debug!(log, "received RPC from peer: {:?} method: {:?} req/resp: {:?}", network_message.peer,network_message.command,network_message.req_resp);
+                        //debug!(log, "received RPC from peer: {:?} method: {:?} req/resp: {:?}", network_message.peer,network_message.command,network_message.req_resp);
                         let method_length = i16(network_message.command.len()).unwrap();
                         let method =  network_message.command.as_ptr();
                         let req_resp = i16(network_message.req_resp);

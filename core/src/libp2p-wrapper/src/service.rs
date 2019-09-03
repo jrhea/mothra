@@ -151,41 +151,29 @@ impl Stream for Service {
             match self.swarm.poll() {
                 //Behaviour events
                 Ok(Async::Ready(Some(event))) => match event {
-                    BehaviourEvent::GossipMessage {
+                    BehaviourEvent::PubsubMessage {
                         source,
                         topics,
                         message,
                     } => {
-                        //debug!(self.log, "Gossipsub message received"; "Message" => format!("{:?}", message));
-                        match message.clone() {
-                            PubsubMessage::Attestation(value) => {
-                                self.tx.lock().unwrap().send(Message {
-                                    category: GOSSIP.to_string(),
-                                    command: BEACON_ATTESTATION_TOPIC.to_string(),
-                                    req_resp: Default::default(),
-                                    peer: Default::default(),
-                                    value: value
-                                }).unwrap();
-                            },
-                             PubsubMessage::Block(value) => {
-                                self.tx.lock().unwrap().send(Message {
-                                    category: GOSSIP.to_string(),
-                                    command: BEACON_BLOCK_TOPIC.to_string(),
-                                    req_resp: Default::default(),
-                                    peer: Default::default(),
-                                    value: value
-                                }).unwrap();
-                            },
-                            PubsubMessage::Unknown(value) => {
-                                self.tx.lock().unwrap().send(Message {
-                                    category: GOSSIP.to_string(),
-                                    command: "".to_string(),
-                                    req_resp: Default::default(),
-                                    peer: Default::default(),
-                                    value: value
-                                }).unwrap();
-                            },
-                        }
+                        //debug!(self.log, "Gossipsub message received"; "Message" => format!("{:?}", topics[0]));
+                        if topics[0].to_string() == BEACON_BLOCK_TOPIC.to_string() {
+                            self.tx.lock().unwrap().send(Message {
+                                category: GOSSIP.to_string(),
+                                command: BEACON_BLOCK_TOPIC.to_string(),
+                                req_resp: Default::default(),
+                                peer: Default::default(),
+                                value: message.clone()
+                            }).unwrap();
+                        } else if topics[0].to_string() == BEACON_ATTESTATION_TOPIC.to_string() {
+                            self.tx.lock().unwrap().send(Message {
+                                category: GOSSIP.to_string(),
+                                command: BEACON_ATTESTATION_TOPIC.to_string(),
+                                req_resp: Default::default(),
+                                peer: Default::default(),
+                                value: message.clone()
+                            }).unwrap();
+                        } 
                         return Ok(Async::Ready(Some(Libp2pEvent::PubsubMessage {
                             source,
                             topics,
@@ -193,7 +181,7 @@ impl Stream for Service {
                         })));
                     }
                     BehaviourEvent::RPC(peer_id, event) => {
-                        debug!(self.log,"Received RPC message from: {:?}", peer_id);
+                        //debug!(self.log,"Received RPC message from: {:?}", peer_id);
                         return Ok(Async::Ready(Some(Libp2pEvent::RPC(peer_id, event))));
                     }
                     BehaviourEvent::PeerDialed(peer_id) => {
@@ -256,7 +244,7 @@ pub enum Libp2pEvent {
     PubsubMessage {
         source: PeerId,
         topics: Vec<TopicHash>,
-        message: PubsubMessage,
+        message:  Vec<u8>,
     },
 }
 
