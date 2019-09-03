@@ -225,7 +225,6 @@ where
         match rpc_event {
             RPCEvent::Request(_, _) => self.send_request(rpc_event),
             RPCEvent::Response(rpc_id, res) => {
-                std::println!("handler.rs {:?}",res);
                 // check if the stream matching the response still exists
                 if let Some(waiting_stream) = self.waiting_substreams.remove(&rpc_id) {
                     // only send one response per stream. This must be in the waiting state.
@@ -308,14 +307,10 @@ where
                 } => match substream.poll() {
                     Ok(Async::Ready(response)) => {
                         if let Some(response) = response {
-                            std::println!("handler.rs: a response?");
-                            return Ok(Async::Ready(ProtocolsHandlerEvent::Custom(
-                                //TODO: update
-                                //build_response(rpc_event, response),
+                                  return Ok(Async::Ready(ProtocolsHandlerEvent::Custom(
                                 RPCEvent::Response(rpc_event.id(), response),
                             )));
                         } else {
-                            std::println!("handler.rs: stream closed early");
                             // stream closed early
                             return Ok(Async::Ready(ProtocolsHandlerEvent::Custom(
                                 RPCEvent::Error(
@@ -362,21 +357,5 @@ where
             self.dial_queue.shrink_to_fit();
         }
         Ok(Async::NotReady)
-    }
-}
-
-/// Given a response back from a peer and the request that sent it, construct a response to send
-/// back to the user. This allows for some data manipulation of responses given requests.
-fn build_response(rpc_event: RPCEvent, rpc_response: RPCErrorResponse) -> RPCEvent {
-    let id = rpc_event.id();
-
-    // handle the types of responses
-    match rpc_response {
-        RPCErrorResponse::Success(response) => {
-            match response {
-                _ => RPCEvent::Response(id, RPCErrorResponse::Success(response)),
-            }
-        }
-        _ => RPCEvent::Response(id, rpc_response),
     }
 }

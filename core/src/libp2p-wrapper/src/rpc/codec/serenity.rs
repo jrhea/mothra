@@ -37,7 +37,6 @@ impl Encoder for SerenityInboundCodec {
     fn encode(&mut self, item: Self::Item, dst: &mut BytesMut) -> Result<(), Self::Error> {
         let bytes = match item {
             RPCErrorResponse::Success(resp) => {
-                std::println!("serenity.rs In Encoder: RPCResponse");
                 match resp {
                     RPCResponse::Message(res) => Bytes::from(res),
                 }
@@ -64,11 +63,10 @@ impl Decoder for SerenityInboundCodec {
     type Error = RPCError;
 
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
-        std::println!("serenity.rs In Decoder: RPCRequest");
         match self.inner.decode(src).map_err(RPCError::from) {
             Ok(Some(packet)) => match self.protocol.message_name.as_str() {
-                "message" => match self.protocol.version.as_str() {
-                    "1.0.0" => Ok(Some(RPCRequest::Message(packet.to_vec()))),
+                "hello" => match self.protocol.version.as_str() {
+                    "1" => Ok(Some(RPCRequest::Message(packet.to_vec()))),
                     _ => Err(RPCError::InvalidProtocol("Unknown Message version")),
                 }
                 _ => Err(RPCError::InvalidProtocol("Unknown message name.")),
@@ -107,7 +105,6 @@ impl Encoder for SerenityOutboundCodec {
     type Error = RPCError;
 
     fn encode(&mut self, item: Self::Item, dst: &mut BytesMut) -> Result<(), Self::Error> {
-        std::println!("serenity.rs In Encoder: RPCRequest");
         let bytes = match item {
             RPCRequest::Message(req) => Bytes::from(req),
         };
@@ -124,12 +121,11 @@ impl Decoder for SerenityOutboundCodec {
     type Error = RPCError;
 
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
-        std::println!("serenity.rs In Decoder: RPCResponse");
         match self.inner.decode(src).map_err(RPCError::from) {
             Ok(Some(packet)) => match self.protocol.message_name.as_str() {
-                "message" => match self.protocol.version.as_str() {
+                "hello" => match self.protocol.version.as_str() {
                     
-                    "1.0.0" => Ok(Some(RPCResponse::Message(packet.to_vec()))),
+                    "1" => Ok(Some(RPCResponse::Message(packet.to_vec()))),
                     _ => Err(RPCError::InvalidProtocol("Unknown rpc message version.")),
                 },
                 _ => Err(RPCError::InvalidProtocol("Unknown method")),

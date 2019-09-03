@@ -22,7 +22,6 @@ impl Encoder for InboundCodec {
     type Error = RPCError;
 
     fn encode(&mut self, item: Self::Item, dst: &mut BytesMut) -> Result<(), Self::Error> {
-        std::println!("mod.rs In Encoder: RPCResponse");
         match self {
             InboundCodec::Serenity(codec) => codec.encode(item, dst),
         }
@@ -34,7 +33,6 @@ impl Decoder for InboundCodec {
     type Error = RPCError;
 
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
-         std::println!("mod.rs In Decoder: RPCRequest");
         match self {
             InboundCodec::Serenity(codec) => codec.decode(src),
         }
@@ -46,7 +44,6 @@ impl Encoder for OutboundCodec {
     type Error = RPCError;
 
     fn encode(&mut self, item: Self::Item, dst: &mut BytesMut) -> Result<(), Self::Error> {
-        std::println!("mod.rs In Encoder: RPCRequest");
         match self {
             OutboundCodec::Serenity(codec) => codec.encode(item, dst),
         }
@@ -58,7 +55,6 @@ impl Decoder for OutboundCodec {
     type Error = RPCError;
 
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
-        std::println!("mod.rs In Decoder: RPCResponse");
         match self {
             OutboundCodec::Serenity(codec) => codec.decode(src),
         }

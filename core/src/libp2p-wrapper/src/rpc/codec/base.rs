@@ -62,7 +62,6 @@ where
     type Error = <TCodec as Encoder>::Error;
 
     fn encode(&mut self, item: Self::Item, dst: &mut BytesMut) -> Result<(), Self::Error> {
-        std::println!("base.rs In Encoder: RPCResponse");
         dst.clear();
         dst.reserve(1);
         dst.put_u8(item.as_u8());
@@ -102,7 +101,6 @@ where
     type Error = <TCodec as Decoder>::Error;
 
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
-        std::println!("base.rs In Decoder: RPCResponse");
         let response_code = {
             if let Some(resp_code) = self.response_code {
                 resp_code
