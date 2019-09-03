@@ -72,7 +72,6 @@ impl<TSubstream> RPC<TSubstream> {
     ///
     /// The peer must be connected for this to succeed.
     pub fn send_rpc(&mut self, peer_id: PeerId, rpc_event: RPCEvent) {
-        std::println!("mod.rs submitting rpc event {:?} ", rpc_event);
         self.events.push(NetworkBehaviourAction::SendEvent {
             peer_id,
             event: rpc_event,
@@ -134,7 +133,6 @@ where
         >,
     > {
         if !self.events.is_empty() {
-            //std::println!("mod.rs submitting rpc event");
             return Async::Ready(self.events.remove(0));
         }
         Async::NotReady

@@ -1,3 +1,4 @@
+use crate::config::*;
 use crate::behaviour::{Behaviour, BehaviourEvent, PubsubMessage};
 use crate::error;
 use crate::multiaddr::Protocol;
@@ -91,7 +92,7 @@ impl Service {
             Ok(_) => {
                 let mut log_address = listen_multiaddr;
                 log_address.push(Protocol::P2p(local_peer_id.clone().into()));
-                info!(log, "Listening on: {}", log_address);
+                info!(log, "Listening established"; "address" => format!("{}", log_address));
             }
             Err(err) => warn!(
                 log,
@@ -102,18 +103,35 @@ impl Service {
         // attempt to connect to user-input libp2p nodes
         for multiaddr in config.libp2p_nodes {
             match Swarm::dial_addr(&mut swarm, multiaddr.clone()) {
-                Ok(()) => debug!(log, "Dialing libp2p node: {}", multiaddr),
+                Ok(()) => debug!(log, "Dialing libp2p peer"; "address" => format!("{}", multiaddr)),
                 Err(err) => debug!(
                     log,
-                    "Could not connect to node: {} error: {:?}", multiaddr, err
+                    "Could not connect to peer"; "address" => format!("{}", multiaddr), "Error" => format!("{:?}", err)
                 ),
             };
         }
 
         // subscribe to default gossipsub topics
         let mut topics = vec![];
-        topics.push(Topic::new(BEACON_ATTESTATION_TOPIC.into()));
-        topics.push(Topic::new(BEACON_BLOCK_TOPIC.into()));
+
+
+       /* Here we subscribe to all the required gossipsub topics required for interop.
+         * The topic builder adds the required prefix and postfix to the hardcoded topics that we
+         * must subscribe to.
+         */
+        let topic_builder = |topic| {
+            Topic::new(format!(
+                "/{}/{}/{}",
+                TOPIC_PREFIX, topic, TOPIC_ENCODING_POSTFIX,
+            ))
+        };
+        topics.push(topic_builder(BEACON_BLOCK_TOPIC));
+        topics.push(topic_builder(BEACON_ATTESTATION_TOPIC));
+        topics.push(topic_builder(VOLUNTARY_EXIT_TOPIC));
+        topics.push(topic_builder(PROPOSER_SLASHING_TOPIC));
+        topics.push(topic_builder(ATTESTER_SLASHING_TOPIC));
+
+        // Add any topics specified by the user
         topics.append(
             &mut config
                 .topics
@@ -132,7 +150,7 @@ impl Service {
                 warn!(log, "Could not subscribe to topic: {:?}", topic)
             }
         }
-        info!(log, "Subscribed to topics: {:?}", subscribed_topics);
+        info!(log, "Subscribed to topics"; "topics" => format!("{:?}", subscribed_topics.iter().map(|t| format!("{}", t)).collect::<Vec<String>>()));
         Ok(Service {
             _local_peer_id: local_peer_id,
             swarm,
@@ -157,18 +175,18 @@ impl Stream for Service {
                         message,
                     } => {
                         //debug!(self.log, "Gossipsub message received"; "Message" => format!("{:?}", topics[0]));
-                        if topics[0].to_string() == BEACON_BLOCK_TOPIC.to_string() {
+                        if topics[0].to_string() == format!("/{}/{}/{}",TOPIC_PREFIX, BEACON_BLOCK_TOPIC, TOPIC_ENCODING_POSTFIX) {
                             self.tx.lock().unwrap().send(Message {
                                 category: GOSSIP.to_string(),
-                                command: BEACON_BLOCK_TOPIC.to_string(),
+                                command: topics[0].to_string(),
                                 req_resp: Default::default(),
                                 peer: Default::default(),
                                 value: message.clone()
                             }).unwrap();
-                        } else if topics[0].to_string() == BEACON_ATTESTATION_TOPIC.to_string() {
+                        } else if topics[0].to_string() == format!("/{}/{}/{}",TOPIC_PREFIX, BEACON_ATTESTATION_TOPIC, TOPIC_ENCODING_POSTFIX) {
                             self.tx.lock().unwrap().send(Message {
                                 category: GOSSIP.to_string(),
-                                command: BEACON_ATTESTATION_TOPIC.to_string(),
+                                command: topics[0].to_string(),
                                 req_resp: Default::default(),
                                 peer: Default::default(),
                                 value: message.clone()

@@ -1,3 +1,4 @@
+use crate::config::*;
 use crate::discovery::Discovery;
 use crate::rpc::{RPCEvent, RPCMessage, RPC};
 use crate::{error, NetworkConfig};
@@ -188,7 +189,7 @@ impl<TSubstream: AsyncRead + AsyncWrite> Behaviour<TSubstream> {
     /// Publishes a message on the pubsub (gossipsub) behaviour.
     pub fn publish(&mut self, topics: Vec<Topic>, message: Vec<u8>) {
         for topic in topics {
-            self.gossipsub.publish(topic, message.clone());
+            self.gossipsub.publish(&topic, message.clone());
         }
     }
 
@@ -200,12 +201,12 @@ impl<TSubstream: AsyncRead + AsyncWrite> Behaviour<TSubstream> {
     }
 
     /* Discovery / Peer management functions */
-    pub fn connected_peers(&self) -> HashSet<PeerId> {
-        self.discovery.connected_peers()
+    pub fn connected_peers(&self) -> &HashSet<PeerId> {
+        self.discovery.connected_peer_set()
     }
 
     pub fn num_connected_peers(&self) -> usize {
-        self.discovery.connected_peers().len()
+        self.discovery.connected_peers()
     }
 }
 

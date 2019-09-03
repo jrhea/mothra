@@ -11,8 +11,8 @@ include = [
 
 [dependencies]
 libp2p-wrapper =  { path = "src/libp2p-wrapper" }
-libp2p =  { git = "https://github.com/SigP/rust-libp2p", rev = "b0d3cf7b4b0fa6c555b64dbdd110673a05457abd" }
-enr =  { git = "https://github.com/SigP/rust-libp2p/", rev = "b0d3cf7b4b0fa6c555b64dbdd110673a05457abd", features = ["serde"] }
+libp2p =  { git = "https://github.com/SigP/rust-libp2p", rev = "61036890d574f5b46573952b20def2baafd6a6e9" }
+enr =  { git = "https://github.com/SigP/rust-libp2p/", rev = "61036890d574f5b46573952b20def2baafd6a6e9", features = ["serde"] }
 parking_lot = "0.9.0"
 slog-term = "^2.4.0"
 slog-async = "^2.3.0"
