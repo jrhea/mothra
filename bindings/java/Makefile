@@ -16,6 +16,7 @@ java-bindings-ingress:
 
 java-bindings-egress: mothra.class
 	$(CC) $(JBIND_DIR)/mothra-jni-egress.c $(INCLUDES) -L$(OUT_DIR) -lmothra $(JAVA_INCLUDES) $(JAVA_LIBS) $(CFLAGS) $(LFLAGS) -o $(OUT_DIR)/libmothra-egress.$(EXT)
+	install_name_tool -change $(OUT_DIR)/release/deps/libmothra.dylib @loader_path/libmothra.dylib $(OUT_DIR)/libmothra-egress.dylib
 
 %.class:
 	javac $*.java -d $(OUT_DIR)/
