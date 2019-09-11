@@ -3,7 +3,7 @@ CC:=gcc
 ifeq ($(OS), linux)
 	EXT:=so
 	OS_LFLAGS:=
-	JAVA_HOME:=
+	JAVA_HOME:=/usr/lib/jvm/java-11-openjdk-amd64
 else ifeq ($(OS), darwin)
 	EXT:=dylib
 	OS_LFLAGS:=-mmacosx-version-min=$(shell defaults read loginwindow SystemVersionStampAsString) -framework CoreFoundation -framework Security
