@@ -18,7 +18,7 @@ ifeq ($(OS), darwin)
 java-bindings-ingress: java-bindings-ingress-build
 	install_name_tool -change $(OUT_DIR)/libmothra-ingress.dylib @loader_path/libmothra-ingress.dylib $(OUT_DIR)/libmothra.dylib
 else
-java-bindings-ingress-relative: java-bindings-ingress-build
+java-bindings-ingress: java-bindings-ingress-build
 endif
 
 clean:
