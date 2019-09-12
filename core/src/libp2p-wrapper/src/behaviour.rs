@@ -85,7 +85,7 @@ impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<GossipsubE
 {
     fn inject_event(&mut self, event: GossipsubEvent) {
         match event {
-            GossipsubEvent::Message(gs_msg) => {
+            GossipsubEvent::Message(_peer_id, gs_msg) => {
                 //debug!(self.log, "Received GossipEvent"; "msg" => format!("{:?}", gs_msg));
 
                 //let msg = PubsubMessage::from_topics(&gs_msg.topics, gs_msg.data);
