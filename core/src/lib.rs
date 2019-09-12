@@ -13,6 +13,7 @@ use std::cell::RefMut;
 use cast::i16;
 use cast::i8;
 use slog::{info, debug, warn, o, Drain};
+use env_logger::{Builder, Env};
 use libp2p_wrapper::{Message,GOSSIP,RPC,DISCOVERY};
 use mothra_api::api;
 
@@ -57,6 +58,8 @@ extern {
 
 #[no_mangle]
 pub extern fn libp2p_start(args_c_char: *mut *mut c_char, length: isize) {
+    Builder::from_env(Env::default()).init();
+
     let decorator = slog_term::TermDecorator::new().build();
     let drain = slog_term::CompactFormat::new(decorator).build().fuse();
     let drain = slog_async::Async::new(drain).build().fuse();
