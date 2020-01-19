@@ -5,12 +5,12 @@ authors = ["Age Manning <Age@AgeManning.com>"]
 edition = "2018"
 
 [dependencies]
-libp2p =  { git = "https://github.com/SigP/rust-libp2p", rev = "8ac9c744197faaadc0e2b64fed7470ac4e2a41ca" }
-enr =  { git = "https://github.com/SigP/rust-libp2p/", rev = "8ac9c744197faaadc0e2b64fed7470ac4e2a41ca", features = ["serde"] }
+libp2p =  { git = "https://github.com/SigP/rust-libp2p", rev = "735313ebda6a98604929f6c4606aefac19e00760" }
+enr =  { git = "https://github.com/SigP/rust-libp2p/", rev = "735313ebda6a98604929f6c4606aefac19e00760", features = ["serde"] }
 clap = "2.32.0"
 parking_lot = "0.7"
-serde = "1.0"
-serde_derive = "1.0"
+serde = "1.0.102"
+serde_derive = "1.0.102"
 slog = { version = "^2.4.1" , features = ["max_level_trace"] }
 tokio = "0.1.16"
 tokio-io-timeout = "0.3.1"
@@ -23,3 +23,4 @@ smallvec = "0.6.10"
 fnv = "1.0.6"
 unsigned-varint = "0.2.2"
 bytes = "0.4.12"
+protobuf = "~2.8.1"

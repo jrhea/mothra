@@ -17,10 +17,10 @@ use std::path::Path;
 use std::str::FromStr;
 use std::time::{Duration, Instant};
 use tokio::io::{AsyncRead, AsyncWrite};
-use tokio_timer::Delay;
+use tokio::timer::Delay;
 
 /// Maximum seconds before searching for extra peers.
-const MAX_TIME_BETWEEN_PEER_SEARCHES: u64 = 60;
+const MAX_TIME_BETWEEN_PEER_SEARCHES: u64 = 120;
 /// Initial delay between peer searches.
 const INITIAL_SEARCH_DELAY: u64 = 5;
 /// Local ENR storage filename.
@@ -32,10 +32,13 @@ pub struct Discovery<TSubstream> {
     /// The peers currently connected to libp2p streams.
     connected_peers: HashSet<PeerId>,
 
+    /// The currently banned peers.
+    banned_peers: HashSet<PeerId>,
+
     /// The target number of connected peers on the libp2p interface.
     max_peers: usize,
 
-    /// directory to save ENR to
+    /// The directory where the ENR is stored.
     enr_dir: String,
 
     /// The delay between peer discovery searches.
@@ -73,10 +76,13 @@ impl<TSubstream> Discovery<TSubstream> {
             None => String::from(""),
         };
 
-        info!(log, "ENR Initialised"; "ENR" => local_enr.to_base64(), "Seq" => local_enr.seq());
+        info!(log, "ENR Initialised"; "enr" => local_enr.to_base64(), "seq" => local_enr.seq());
         debug!(log, "Discv5 Node ID Initialised"; "node_id" => format!("{}",local_enr.node_id()));
 
-        let mut discovery = Discv5::new(local_enr, local_key.clone(), config.listen_address)
+        // the last parameter enables IP limiting. 2 Nodes on the same /24 subnet per bucket and 10
+        // nodes on the same /24 subnet per table.
+        // TODO: IP filtering is currently disabled for the DHT. Enable for production
+        let mut discovery = Discv5::new(local_enr, local_key.clone(), config.listen_address, false)
             .map_err(|e| format!("Discv5 service failed. Error: {:?}", e))?;
 
         // Add bootnodes to routing table
@@ -84,7 +90,7 @@ impl<TSubstream> Discovery<TSubstream> {
             debug!(
                 log,
                 "Adding node to routing table";
-                "Node ID" => format!("{}",
+                "node_id" => format!("{}",
                 bootnode_enr.node_id())
             );
             discovery.add_enr(bootnode_enr);
@@ -92,6 +98,7 @@ impl<TSubstream> Discovery<TSubstream> {
 
         Ok(Self {
             connected_peers: HashSet::new(),
+            banned_peers: HashSet::new(),
             max_peers: config.max_peers,
             peer_discovery_delay: Delay::new(Instant::now()),
             past_discovery_delay: INITIAL_SEARCH_DELAY,
@@ -102,6 +109,7 @@ impl<TSubstream> Discovery<TSubstream> {
         })
     }
 
+    /// Return the nodes local ENR.
     pub fn local_enr(&self) -> &Enr {
         self.discovery.local_enr()
     }
@@ -113,7 +121,7 @@ impl<TSubstream> Discovery<TSubstream> {
         self.find_peers();
     }
 
-    /// Add an Enr to the routing table of the discovery mechanism.
+    /// Add an ENR to the routing table of the discovery mechanism.
     pub fn add_enr(&mut self, enr: Enr) {
         self.discovery.add_enr(enr);
     }
@@ -128,24 +136,23 @@ impl<TSubstream> Discovery<TSubstream> {
         &self.connected_peers
     }
 
+    /// The peer has been banned. Add this peer to the banned list to prevent any future
+    /// re-connections.
+    // TODO: Remove the peer from the DHT if present
+    pub fn peer_banned(&mut self, peer_id: PeerId) {
+        self.banned_peers.insert(peer_id);
+    }
+
+    pub fn peer_unbanned(&mut self, peer_id: &PeerId) {
+        self.banned_peers.remove(peer_id);
+    }
+
     /// Search for new peers using the underlying discovery mechanism.
     fn find_peers(&mut self) {
         // pick a random NodeId
         let random_node = NodeId::random();
         debug!(self.log, "Searching for peers");
         self.discovery.find_node(random_node);
-
-        // update the time until next discovery
-        let delay = {
-            if self.past_discovery_delay < MAX_TIME_BETWEEN_PEER_SEARCHES {
-                self.past_discovery_delay *= 2;
-                self.past_discovery_delay
-            } else {
-                MAX_TIME_BETWEEN_PEER_SEARCHES
-            }
-        };
-        self.peer_discovery_delay
-            .reset(Instant::now() + Duration::from_secs(delay));
     }
 }
 
@@ -168,6 +175,7 @@ where
 
     fn inject_connected(&mut self, peer_id: PeerId, _endpoint: ConnectedPoint) {
         self.connected_peers.insert(peer_id);
+        // TODO: Drop peers if over max_peer limit
     }
 
     fn inject_disconnected(&mut self, peer_id: &PeerId, _endpoint: ConnectedPoint) {
@@ -207,10 +215,14 @@ where
                     if self.connected_peers.len() < self.max_peers {
                         self.find_peers();
                     }
+                    // Set to maximum, and update to earlier, once we get our results back.
+                    self.peer_discovery_delay.reset(
+                        Instant::now() + Duration::from_secs(MAX_TIME_BETWEEN_PEER_SEARCHES),
+                    );
                 }
                 Ok(Async::NotReady) => break,
                 Err(e) => {
-                    warn!(self.log, "Discovery peer search failed"; "Error" => format!("{:?}", e));
+                    warn!(self.log, "Discovery peer search failed"; "error" => format!("{:?}", e));
                 }
             }
         }
@@ -225,7 +237,7 @@ where
                             // query.
                         }
                         Discv5Event::SocketUpdated(socket) => {
-                            info!(self.log, "Address updated"; "IP" => format!("{}",socket.ip()));
+                            info!(self.log, "Address updated"; "ip" => format!("{}",socket.ip()), "udp_port" => format!("{}", socket.port()));
                             let mut address = Multiaddr::from(socket.ip());
                             address.push(Protocol::Tcp(self.tcp_port));
                             let enr = self.discovery.local_enr();
@@ -237,6 +249,17 @@ where
                         }
                         Discv5Event::FindNodeResult { closer_peers, .. } => {
                             debug!(self.log, "Discovery query completed"; "peers_found" => closer_peers.len());
+                            // update the time to the next query
+                            if self.past_discovery_delay < MAX_TIME_BETWEEN_PEER_SEARCHES {
+                                self.past_discovery_delay *= 2;
+                            }
+                            let delay = std::cmp::max(
+                                self.past_discovery_delay,
+                                MAX_TIME_BETWEEN_PEER_SEARCHES,
+                            );
+                            self.peer_discovery_delay
+                                .reset(Instant::now() + Duration::from_secs(delay));
+
                             if closer_peers.is_empty() {
                                 debug!(self.log, "Discovery random query found no peers");
                             }
@@ -244,6 +267,7 @@ where
                                 // if we need more peers, attempt a connection
                                 if self.connected_peers.len() < self.max_peers
                                     && self.connected_peers.get(&peer_id).is_none()
+                                    && !self.banned_peers.contains(&peer_id)
                                 {
                                     debug!(self.log, "Peer discovered"; "peer_id"=> format!("{:?}", peer_id));
                                     return Async::Ready(NetworkBehaviourAction::DialPeer {
@@ -277,7 +301,7 @@ fn load_enr(
     // Build the local ENR.
     // Note: Discovery should update the ENR record's IP to the external IP as seen by the
     // majority of our peers.
-    let mut local_enr = EnrBuilder::new()
+    let mut local_enr = EnrBuilder::new("v4")
         .ip(config.discovery_address)
         .tcp(config.libp2p_port)
         .udp(config.discovery_port)
@@ -293,7 +317,7 @@ fn load_enr(
                 match Enr::from_str(&enr_string) {
                     Ok(enr) => {
                         if enr.node_id() == local_enr.node_id() {
-                            if enr.ip() == config.discovery_address.into()
+                            if enr.ip().map(Into::into) == Some(config.discovery_address)
                                 && enr.tcp() == Some(config.libp2p_port)
                                 && enr.udp() == Some(config.discovery_port)
                             {

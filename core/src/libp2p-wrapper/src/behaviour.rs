@@ -85,13 +85,13 @@ impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<GossipsubE
 {
     fn inject_event(&mut self, event: GossipsubEvent) {
         match event {
-            GossipsubEvent::Message(_peer_id, gs_msg) => {
+            GossipsubEvent::Message(propagation_source, _peer_id, gs_msg) => {
                 //debug!(self.log, "Received GossipEvent"; "msg" => format!("{:?}", gs_msg));
 
                 //let msg = PubsubMessage::from_topics(&gs_msg.topics, gs_msg.data);
 
                 self.events.push(BehaviourEvent::PubsubMessage {
-                    source: gs_msg.source,
+                    source: propagation_source,
                     topics: gs_msg.topics,
                     message: gs_msg.data
                 });
@@ -146,8 +146,10 @@ impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<IdentifyEv
 {
     fn inject_event(&mut self, event: IdentifyEvent) {
         match event {
-            IdentifyEvent::Identified {
-                peer_id, mut info, ..
+            IdentifyEvent::Received {
+                peer_id,
+                mut info,
+                observed_addr,
             } => {
                 if info.listen_addrs.len() > MAX_IDENTIFY_ADDRESSES {
                     debug!(
@@ -156,15 +158,16 @@ impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<IdentifyEv
                     );
                     info.listen_addrs.truncate(MAX_IDENTIFY_ADDRESSES);
                 }
-                debug!(self.log, "Identified Peer"; "Peer" => format!("{}", peer_id),
-                "Protocol Version" => info.protocol_version,
-                "Agent Version" => info.agent_version,
-                "Listening Addresses" => format!("{:?}", info.listen_addrs),
-                "Protocols" => format!("{:?}", info.protocols)
+                debug!(self.log, "Identified Peer"; "peer" => format!("{}", peer_id),
+                "protocol_version" => info.protocol_version,
+                "agent_version" => info.agent_version,
+                "listening_ addresses" => format!("{:?}", info.listen_addrs),
+                "observed_address" => format!("{:?}", observed_addr),
+                "protocols" => format!("{:?}", info.protocols)
                 );
             }
+            IdentifyEvent::Sent { .. } => {}
             IdentifyEvent::Error { .. } => {}
-            IdentifyEvent::SendBack { .. } => {}
         }
     }
 }
