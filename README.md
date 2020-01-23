@@ -46,6 +46,28 @@ Install the Rust compiler and package manager:
 
 ```
 
+Install dotnet sdk [here](https://download.visualstudio.microsoft.com/download/pr/749db4bc-73c3-4ffb-a545-c315dc9a0ca8/5281258f5dcae636efe557b8b305e20b/dotnet-sdk-3.1.101-osx-x64.pkg)
+
+Once the dotnet sdk is installed open a new Terminal and type:
+
+```sh
+> dotnet
+Usage: dotnet [options]
+Usage: dotnet [path-to-application]
+
+Options:
+  -h|--help         Display help.
+  --info            Display .NET Core information.
+  --list-sdks       Display the installed SDKs.
+  --list-runtimes   Display the installed runtimes.
+
+path-to-application:
+  The path to an application .dll file to execute.
+```
+
+> Note: if you receive an error message make sure you are working from a new Terminal session
+
+
 `tmux` is the last prereq, but it is optional.  Installing it will make running the demo easier:
 
 ```sh

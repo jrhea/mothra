@@ -10,9 +10,16 @@ java-mash: clean java
 
 c: clean-bin c-examples
 
+dotnet: clean-bin dotnet-examples
+
 java: clean-bin java-examples
 
 c-examples: c-bindings
+	@echo ""
+	@echo Building examples
+	cd $(EXAMPLES_DIR) && make $@
+
+dotnet-examples: c-bindings
 	@echo ""
 	@echo Building examples
 	cd $(EXAMPLES_DIR) && make $@

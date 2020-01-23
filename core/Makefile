@@ -7,7 +7,8 @@ JAVA_LIBS = -L$(JAVA_HOME)/lib/server/ -ljvm
 
 c-bindings:
 	rm -f $(OUT_DIR)/target/release/*.*
-	cargo build --release
+	cargo build --release --target-dir=$(OUT_DIR)
+	cp $(OUT_DIR)/release/libmothra.$(EXT) $(OUT_DIR)/
 
 java-bindings-ingress-build:
 	rm -f $(OUT_DIR)/target/release/*.*

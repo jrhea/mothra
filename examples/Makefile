@@ -5,6 +5,9 @@ include ../config.mk
 c-examples: 
 	cd c && make $@
 
+dotnet-examples: 
+	cd dotnet && make $@
+
 java-examples:
 	cd java && make $@
 

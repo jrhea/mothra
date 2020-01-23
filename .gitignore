@@ -7,3 +7,5 @@
 *.code-workspace
 *.vscode
 jni.h
+**/obj
+**/.idea
