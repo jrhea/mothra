@@ -7,6 +7,7 @@ Mothra was created to house native language bindings between [Rust-LibP2P](https
 - C
 - Java
 - .Net
+- Rust (duh)
 
 ### The Thing That Should Not Be
 
@@ -22,7 +23,7 @@ Mothra is wire protocol agnostic and intended to provide a simple API that requi
 - PubSub
   - event subscription
   - send/receive
-- RPC (not yet implemented)
+- RPC
   - send/receive
 
 
