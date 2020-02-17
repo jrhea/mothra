@@ -50,14 +50,30 @@ macro_rules! get_tx {
     );
 }
 
-extern {
+extern "C" {
+    fn ingress_register_handlers(
+        discovered_peer_ptr: unsafe extern "C" fn(peer_c_uchar: *const c_uchar, peer_length: i16),
+        receive_gossip_ptr: unsafe extern "C" fn(topic_c_uchar: *const c_uchar, topic_length: i16, data_c_uchar: *mut c_uchar, data_length: i16), 
+        receive_rpc_ptr: unsafe extern "C" fn(method_c_uchar: *const c_uchar, method_length: i16, req_resp: i16, peer_c_uchar: *const c_uchar, peer_length: i16, data_c_uchar: *mut c_uchar, data_length: i16)
+    );
     fn discovered_peer(peer_c_uchar: *const c_uchar, peer_length: i16);
     fn receive_gossip(topic_c_uchar: *const c_uchar, topic_length: i16, data_c_uchar: *mut c_uchar, data_length: i16);
     fn receive_rpc(method_c_uchar: *const c_uchar, method_length: i16, req_resp: i16, peer_c_uchar: *const c_uchar, peer_length: i16, data_c_uchar: *mut c_uchar, data_length: i16);
 }
 
 #[no_mangle]
-pub extern fn libp2p_start(args_c_char: *mut *mut c_char, length: isize) {
+pub extern "C" fn libp2p_register_handlers(
+        discovered_peer_ptr: unsafe extern "C" fn(peer_c_uchar: *const c_uchar, peer_length: i16),
+        receive_gossip_ptr: unsafe extern "C" fn(topic_c_uchar: *const c_uchar, topic_length: i16, data_c_uchar: *mut c_uchar, data_length: i16), 
+        receive_rpc_ptr: unsafe extern "C" fn(method_c_uchar: *const c_uchar, method_length: i16, req_resp: i16, peer_c_uchar: *const c_uchar, peer_length: i16, data_c_uchar: *mut c_uchar, data_length: i16)
+    ) {
+    unsafe {
+        ingress_register_handlers(discovered_peer_ptr, receive_gossip_ptr, receive_rpc_ptr);
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn libp2p_start(args_c_char: *mut *mut c_char, length: isize) {
     Builder::from_env(Env::default()).init();
 
     let decorator = slog_term::TermDecorator::new().build();
@@ -133,7 +149,7 @@ pub extern fn libp2p_start(args_c_char: *mut *mut c_char, length: isize) {
 }
 
 #[no_mangle]
-pub extern fn libp2p_send_gossip(topic_c_uchar: *mut c_uchar, topic_length: usize, data_c_uchar: *mut c_uchar, data_length: usize) {
+pub extern "C" fn libp2p_send_gossip(topic_c_uchar: *mut c_uchar, topic_length: usize, data_c_uchar: *mut c_uchar, data_length: usize) {
     let topic = unsafe { std::str::from_utf8_unchecked(std::slice::from_raw_parts(topic_c_uchar, topic_length)) };
     let mut data = unsafe { std::slice::from_raw_parts_mut(data_c_uchar, data_length) };
     let gossip_data = Message::new(GOSSIP.to_string(),topic.to_string(),Default::default(),Default::default(),data.to_vec());
@@ -141,7 +157,7 @@ pub extern fn libp2p_send_gossip(topic_c_uchar: *mut c_uchar, topic_length: usiz
 }
 
 #[no_mangle]
-pub extern fn libp2p_send_rpc_request(method_c_uchar: *mut c_uchar, method_length: usize, peer_c_uchar: *mut c_uchar, peer_length: usize, data_c_uchar: *mut c_uchar, data_length: usize) {
+pub extern "C" fn libp2p_send_rpc_request(method_c_uchar: *mut c_uchar, method_length: usize, peer_c_uchar: *mut c_uchar, peer_length: usize, data_c_uchar: *mut c_uchar, data_length: usize) {
     //std::println!("In libp2p_send_rpc_request");
     let method = unsafe { std::str::from_utf8_unchecked(std::slice::from_raw_parts(method_c_uchar, method_length)) };
     let peer = unsafe { std::str::from_utf8_unchecked(std::slice::from_raw_parts(peer_c_uchar, peer_length)) };
@@ -151,7 +167,7 @@ pub extern fn libp2p_send_rpc_request(method_c_uchar: *mut c_uchar, method_lengt
 }
 
 #[no_mangle]
-pub extern fn libp2p_send_rpc_response(method_c_uchar: *mut c_uchar, method_length: usize, peer_c_uchar: *mut c_uchar, peer_length: usize, data_c_uchar: *mut c_uchar, data_length: usize) {
+pub extern "C" fn libp2p_send_rpc_response(method_c_uchar: *mut c_uchar, method_length: usize, peer_c_uchar: *mut c_uchar, peer_length: usize, data_c_uchar: *mut c_uchar, data_length: usize) {
     //std::println!("In libp2p_send_rpc_response");
     let method = unsafe { std::str::from_utf8_unchecked(std::slice::from_raw_parts(method_c_uchar, method_length)) };
     let peer = unsafe { std::str::from_utf8_unchecked(std::slice::from_raw_parts(peer_c_uchar, peer_length)) };

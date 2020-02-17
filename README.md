@@ -82,6 +82,19 @@ Installing this will make running the demo easier:
 
 ```
 
+On Windows:
+
+Follow the instructions to install rust-up on Windows.
+
+You will need Visual Studio installed; the linker is used by Rust, and the compiler for the C-bindings and example, and dotnet core for the dotnet example.
+
+You will also need vcpkg installed in a sibling folder of Mothra. Clone it from 'https://github.com/microsoft/vcpkg' and then run the bootstrap to configure.
+
+Then use it to install the OpenSSL libraries:
+
+```
+vcpkg install openssl:x64-windows
+```
 
 ### Build Mothra
 
@@ -122,6 +135,23 @@ Next cd into the project's root dir and build:
 > make dotnet
 
 ```
+
+#### Build on Windows
+
+Run the build scripts a in Visual Studio x64 Native Tools Command Prompt.
+
+A set of batch files, conveniently called Make.cmd, are provided for running on Windows.
+
+```
+> Make.cmd
+```
+
+This will make the C example and dotnet example. (It's not a make file, so no separate targets, just a batch file.)
+
+There is no tmux, but there is a PeerDemo.cmd batch file in the dotnet example which will launch and run two dotnet sessions.
+
+You can also grab the ENR and run a demo between C and dotnet.
+
 
 ### Sample App
 

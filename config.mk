@@ -1,12 +1,15 @@
 OS:=$(shell uname -s | tr '[:upper:]' '[:lower:]')
 CC:=gcc
+AR:=ar
 ifeq ($(OS), linux)
 	EXT:=so
 	OS_LFLAGS:=
+	OS_CFLAGS:=-Wl,-rpath='$${ORIGIN}'
 	JAVA_HOME:=$(shell java -XshowSettings:properties -version 2>&1 > /dev/null | grep 'java.home' | sed 's/\s*java.home = //' | sed 's/\/jre//')
 else ifeq ($(OS), darwin)
 	EXT:=dylib
 	OS_LFLAGS:=-mmacosx-version-min=$(shell defaults read loginwindow SystemVersionStampAsString) -framework CoreFoundation -framework Security
+	OS_CFLAGS:=
 	JAVA_HOME:= $(shell java -XshowSettings:properties -version 2>&1 > /dev/null | grep 'java.home' | sed 's/\s*java.home = //' | sed 's/\/jre//')
 endif
 ROOT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))

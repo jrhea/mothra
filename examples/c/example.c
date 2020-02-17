@@ -1,7 +1,15 @@
+#ifdef _WIN64
+#include <windows.h>
+#else
 #include <unistd.h>
+#endif
+
 #include <stdio.h>
 #include <string.h>
 #include "mothra.h"
+
+#define sleep_seconds 5
+
 
 void on_discovered_peer(const unsigned char* peer_utf8, int peer_length) {
     printf("C: discovered peer");
@@ -29,7 +37,11 @@ int main (int argc, char** argv) {
     );
     libp2p_start(argv,argc);
     while(1){
-        sleep(5);
+#ifdef _WIN64
+        Sleep(sleep_seconds * 1000);
+#else
+        sleep(sleep_seconds);
+#endif
         char* topic = "/eth2/beacon_block/ssz";
         int topic_length = (int)(strlen(topic));
         char* data = "Hello from C";

@@ -21,7 +21,6 @@ namespace Example
     {
         // mothra.dll on Windows, libmothra.so on Linux, libmotha.dylib on OSX
         private const string DllName = "mothra";
-        private const string IngressDllName = "mothra-ingress";
         
         [DllImport(DllName, EntryPoint = "libp2p_start", CallingConvention = CallingConvention.Cdecl)]
         public static extern unsafe void Start([In, Out] string[] args, int length);
@@ -35,7 +34,7 @@ namespace Example
         [DllImport(DllName, EntryPoint = "libp2p_send_rpc_response", CallingConvention = CallingConvention.Cdecl)]
         public static extern unsafe void SendResponse(byte* methodUtf8, int methodLength, byte* peerUtf8, int peerLength, byte* data, int dataLength);
 
-        [DllImport(IngressDllName, EntryPoint = "libp2p_register_handlers", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(DllName, EntryPoint = "libp2p_register_handlers", CallingConvention = CallingConvention.Cdecl)]
         public static extern unsafe void RegisterHandlers(DiscoveredPeer discoveredPeer, ReceiveGossip receiveGossip, ReceiveRpc receiveRpc);
         //public static extern unsafe void RegisterHandlers(IntPtr discoveredPeer, IntPtr receiveGossip, IntPtr receiveRpc);
         

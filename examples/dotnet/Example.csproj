@@ -14,19 +14,25 @@
   </PropertyGroup>
 
   <ItemGroup Condition="Exists('..\..\bin\libmothra.so')">
-    <None Include="..\..\bin\libmothra-ingress.so" Link="libmothra-ingress.so">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
     <None Include="..\..\bin\libmothra.so" Link="libmothra.so">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 
   <ItemGroup Condition="Exists('..\..\bin\libmothra.dylib')">
-    <None Include="..\..\bin\libmothra-ingress.dylib" Link="libmothra-ingress.dylib">
+    <None Include="..\..\bin\libmothra.dylib" Link="libmothra.dylib">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\bin\libmothra.dylib" Link="libmothra.dylib">
+  </ItemGroup>
+
+  <ItemGroup Condition="Exists('..\..\bin\mothra.dll')">
+    <None Include="..\..\bin\mothra.dll" Link="mothra.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\bin\libcrypto*.*">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\bin\libssl*.*">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
