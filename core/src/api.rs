@@ -83,7 +83,6 @@ pub unsafe fn receive_rpc (method: String, req_resp: u8, peer: String, data: Vec
 
 #[no_mangle]
 pub unsafe fn network_start(args_vec: Vec<String>) {
-    println!("foo1");
     Builder::from_env(Env::default()).init();
     let decorator = slog_term::TermDecorator::new().build();
     let drain = slog_term::CompactFormat::new(decorator).build().fuse();

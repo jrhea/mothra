@@ -10,11 +10,9 @@ fn main() {
             on_receive_rpc
         );
     }
-    println!("foo");
     unsafe {
         network_start(args);
     }
-    println!("foo2");
     let dur = time::Duration::from_secs(5);
     loop{
         thread::sleep(dur);

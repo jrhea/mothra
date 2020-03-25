@@ -15,4 +15,6 @@ ffi-bindings:
 	cp $(OUT_DIR)/release/libmothra.$(EXT) $(OUT_DIR)/
 
 clean:
+	ln -sf Cargo-rust.toml Cargo.toml
 	cargo clean
+	rm -f Cargo.toml
