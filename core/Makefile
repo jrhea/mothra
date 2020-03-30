@@ -5,13 +5,13 @@ include ../config.mk
 rust-bindings:
 	rm -f Cargo.toml
 	ln -sf Cargo-rust.toml Cargo.toml
-	cargo build --release
+	cargo build --release --features "api"
 	ln -sf $(CORE_DIR)/target/release $(OUT_DIR)/release
 
 ffi-bindings:
 	rm -f Cargo.toml
 	ln -sf Cargo-ffi.toml Cargo.toml
-	cargo build --release --target-dir=$(OUT_DIR)
+	cargo build --release --features "capi" --target-dir=$(OUT_DIR)
 	cp $(OUT_DIR)/release/libmothra.$(EXT) $(OUT_DIR)/
 
 clean:
