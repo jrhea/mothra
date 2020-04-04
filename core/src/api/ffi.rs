@@ -65,22 +65,9 @@ pub fn receive_rpc(method: String, req_resp: u8, peer: String, mut data: Vec<u8>
 
 #[no_mangle]
 pub unsafe extern "C" fn register_handlers(
-    discovered_peer: unsafe extern "C" fn(peer_c_uchar: *const c_uchar, peer_length: i16),
-    receive_gossip: unsafe extern "C" fn(
-        topic_c_uchar: *const c_uchar,
-        topic_length: i16,
-        data_c_uchar: *mut c_uchar,
-        data_length: i16,
-    ),
-    receive_rpc: unsafe extern "C" fn(
-        method_c_uchar: *const c_uchar,
-        method_length: i16,
-        req_resp: i16,
-        peer_c_uchar: *const c_uchar,
-        peer_length: i16,
-        data_c_uchar: *mut c_uchar,
-        data_length: i16,
-    ),
+    discovered_peer: DiscoveredPeerType,
+    receive_gossip: ReceiveGossipType,
+    receive_rpc: ReceiveRpcType,
 ) {
     DISCOVERED_PEER_PTR = Some(discovered_peer);
     RECEIVE_GOSSIP_PTR = Some(receive_gossip);
