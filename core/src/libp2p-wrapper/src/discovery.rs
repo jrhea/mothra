@@ -131,7 +131,7 @@ impl<TSubstream> Discovery<TSubstream> {
         self.connected_peers.len()
     }
 
-    /// The current number of connected libp2p peers.
+    /// The set of libp2p peers.
     pub fn connected_peer_set(&self) -> &HashSet<PeerId> {
         &self.connected_peers
     }

@@ -86,9 +86,6 @@ impl<TSubstream: AsyncRead + AsyncWrite> NetworkBehaviourEventProcess<GossipsubE
         match event {
             GossipsubEvent::Message(propagation_source, _peer_id, gs_msg) => {
                 //debug!(self.log, "Received GossipEvent"; "msg" => format!("{:?}", gs_msg));
-
-                //let msg = PubsubMessage::from_topics(&gs_msg.topics, gs_msg.data);
-
                 self.events.push(BehaviourEvent::PubsubMessage {
                     source: propagation_source,
                     topics: gs_msg.topics,
@@ -227,10 +224,6 @@ pub enum BehaviourEvent {
 /// Messages that are passed to and from the pubsub (Gossipsub) behaviour.
 #[derive(Debug, Clone, PartialEq)]
 pub enum PubsubMessage {
-    /// Gossipsub message providing notification of a new block.
-    Block(Vec<u8>),
-    /// Gossipsub message providing notification of a new attestation.
-    Attestation(Vec<u8>),
     /// Gossipsub message from an unknown topic.
     Unknown(Vec<u8>),
 }
