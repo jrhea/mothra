@@ -4,8 +4,11 @@
 #include <unistd.h>
 #endif
 
-#include <stdio.h>
 #include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
 #include "mothra-c.h"
 
 #define sleep_seconds 5
@@ -30,15 +33,13 @@ void on_receive_rpc(const unsigned char* method_utf8, int method_length, int req
 }
 
 int main (int argc, char** argv) {
-    printf("one\n");
     register_handlers(
         on_discovered_peer,
         on_receive_gossip,
         on_receive_rpc
     );
-     printf("two\n");
     network_start(argv,argc);
-     printf("three\n");
+    srand(time(NULL));
     while(1){
 #ifdef _WIN64
         Sleep(sleep_seconds * 1000);
@@ -47,7 +48,10 @@ int main (int argc, char** argv) {
 #endif
         char* topic = "/eth2/beacon_block/ssz";
         int topic_length = (int)(strlen(topic));
-        char* data = "Hello from C";
+        char r[3], data[50];
+        sprintf(r, "%d",rand()%99);
+        strcpy(data,"Hello from C.  Random number: ");
+        strncat(data,r,20);
         int data_length = (int)(strlen(data));
         send_gossip((unsigned char*)topic, topic_length, (unsigned char*)data, data_length);
     }
