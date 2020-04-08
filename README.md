@@ -13,7 +13,7 @@ Mothra was created to house native language bindings between [Rust-LibP2P](https
 
 ![mothra](./resources/mothra.jpg)
   
-Mothra is wire protocol agnostic and intended to provide a simple API that requires no previous knowledge of libP2P.  The API consists of:
+Mothra providea a simple (slightly opinionated) API that requires no previous knowledge of libP2P.  The API consists of:
 
 - Basic network configuration settings 
   - ip addresses
@@ -21,10 +21,8 @@ Mothra is wire protocol agnostic and intended to provide a simple API that requi
   - logging
   - etc
 - PubSub
-  - event subscription
-  - send/receive
 - RPC
-  - send/receive
+- Discovery
 
 
 
