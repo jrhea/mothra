@@ -11,4 +11,3 @@ java-bindings:
 clean:
 	cd $(JBIND_DIR) && make $@
 	cd $(DBIND_DIR) && make $@
-	cd $(CBIND_DIR) && make $@
