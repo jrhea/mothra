@@ -11,7 +11,7 @@ Mothra was created to house bindings between [Rust-LibP2P](https://github.com/li
 
 ### The Thing That Should Not Be
 
-![mothra](./resources/mothra.jpg)
+![mothra](https://github.com/prrkl/docs/blob/master/resources/mothra.jpg)
   
 Mothra providea a simple (slightly opinionated) API that requires no previous knowledge of libP2P.  The API consists of:
 
@@ -188,7 +188,7 @@ You can also grab the ENR and run a demo between C and dotnet.
 
 Here is a screenshot of the sample app in action:
 
-![demo](./resources/demo.jpeg)
+![demo](https://github.com/prrkl/docs/blob/master/resources/mothra-demo.jpeg)
 
 
 #### Run Sample App (Rust)
