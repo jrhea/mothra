@@ -156,6 +156,9 @@ impl Config {
                 unused_port("tcp").map_err(|e| format!("Failed to get port for libp2p: {}", e))?;
             self.network_config.discovery_port = unused_port("udp")
                 .map_err(|e| format!("Failed to get port for discovery: {}", e))?;
+
+            self.network_config.enr_tcp_port = Some(self.network_config.libp2p_port);
+            self.network_config.enr_udp_port = Some(self.network_config.discovery_port);
         }
         Ok(())
     }
