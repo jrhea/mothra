@@ -45,7 +45,7 @@ pub fn cli_app<'a, 'b>() -> App<'a, 'b> {
         Arg::with_name("maxpeers")
             .long("maxpeers")
             .help("The maximum number of peers.")
-            .default_value("10")
+            .default_value("50")
             .takes_value(true),
     )
     .arg(

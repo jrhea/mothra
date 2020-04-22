@@ -116,7 +116,8 @@ impl Default for Config {
             .enr_update(true) // update IP based on PONG responses
             .enr_peer_update_min(2) // prevents NAT's should be raised for mainnet
             .query_parallelism(5)
-            .query_timeout(Duration::from_secs(2))
+            .query_timeout(Duration::from_secs(60))
+            .query_peer_timeout(Duration::from_secs(2))
             .ip_limit(false) // limits /24 IP's in buckets. Enable for mainnet
             .ping_interval(Duration::from_secs(300))
             .build();
@@ -131,7 +132,7 @@ impl Default for Config {
             enr_address: None,
             enr_udp_port: None,
             enr_tcp_port: None,
-            max_peers: 10,
+            max_peers: 50,
             secret_key_hex: None,
             gs_config,
             discv5_config,
