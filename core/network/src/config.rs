@@ -114,7 +114,7 @@ impl Default for Config {
             .request_timeout(Duration::from_secs(4))
             .request_retries(2)
             .enr_update(true) // update IP based on PONG responses
-            .enr_peer_update_min(2) // prevents NAT's should be raised for mainnet
+            .enr_peer_update_min(5) // prevents NAT's should be raised for mainnet
             .query_parallelism(5)
             .query_timeout(Duration::from_secs(60))
             .query_peer_timeout(Duration::from_secs(2))
